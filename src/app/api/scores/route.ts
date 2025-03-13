@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/server/prisma'
+import { checkAchievements, calculatePoints } from '@/lib/achievements'
 
 export async function POST(request: Request) {
   try {
-    const { userId, time, completed = false } = await request.json()
+    const { userId, time, completed, mistakes = 0 } = await request.json()
 
     // Converte o userId para string
     const userIdString = String(userId)
@@ -12,6 +13,14 @@ export async function POST(request: Request) {
     const existingScore = await prisma.score.findFirst({
       where: { userId: userIdString }
     })
+
+    // Verifica conquistas se o jogo foi completado
+    const unlockedAchievements = completed ? 
+      await checkAchievements(userIdString, { time, completed, mistakes }) : 
+      []
+
+    // Calcula pontos baseado no tempo e conquistas
+    const points = completed ? calculatePoints(time, unlockedAchievements) : 0
 
     let score
 
@@ -23,7 +32,8 @@ export async function POST(request: Request) {
         score = await prisma.score.create({
           data: { 
             userId: userIdString, 
-            time: null, // marca como não completado
+            time: null,
+            points,
             completed: false
           }
         })
@@ -35,6 +45,7 @@ export async function POST(request: Request) {
           where: { id: existingScore.id },
           data: { 
             time,
+            points,
             completed: true
           }
         })
@@ -47,6 +58,7 @@ export async function POST(request: Request) {
         data: { 
           userId: userIdString, 
           time,
+          points,
           completed: true
         }
       })
@@ -57,6 +69,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ 
       success: true, 
       score,
+      unlockedAchievements,
       message: !completed ? 'Jogo não completado' :
         (existingScore && existingScore.completed && time >= existingScore.time!)
           ? 'Tempo anterior era melhor' 
@@ -74,36 +87,9 @@ export async function POST(request: Request) {
 
 export async function GET() {
   try {
-    const scores = await prisma.score.findMany({
-      where: {
-        OR: [
-          { completed: true },
-          { completed: false }
-        ]
-      },
-      orderBy: [
-        { completed: 'desc' }, // Completados primeiro
-        { time: 'asc' } // Depois ordena por tempo
-      ],
-      take: 10,
-      include: {
-        user: {
-          select: {
-            name: true
-          }
-        }
-      }
-    })
-
-    // Formata os resultados para a exibição
-    const formattedScores = scores.map(score => ({
-      ...score,
-      displayTime: score.completed ? `${score.time} segundos` : 'Não completou'
-    }))
-
+    const scores = await getFormattedScores()
     await prisma.$disconnect()
-
-    return NextResponse.json(formattedScores)
+    return NextResponse.json(scores)
   } catch (error) {
     console.error('Erro:', error)
     await prisma.$disconnect()
@@ -112,4 +98,46 @@ export async function GET() {
       error: 'Erro ao buscar pontuações' 
     }, { status: 500 })
   }
+}
+
+async function getFormattedScores() {
+  const scores = await prisma.score.findMany({
+    where: {
+      OR: [
+        { completed: true },
+        { completed: false }
+      ]
+    },
+    orderBy: [
+      { points: 'desc' }, // Primeiro ordena por pontos
+      { completed: 'desc' }, // Depois por completados
+      { time: 'asc' } // Por fim por tempo
+    ],
+    take: 10,
+    include: {
+      user: {
+        select: {
+          name: true,
+          achievements: {
+            include: {
+              achievement: true
+            }
+          }
+        }
+      }
+    }
+  })
+
+  return scores.map(score => ({
+    ...score,
+    displayTime: score.completed ? `${score.time} segundos` : 'Não completou',
+    user: {
+      ...score.user,
+      achievements: score.user.achievements.map(ua => ({
+        name: ua.achievement.name,
+        description: ua.achievement.description,
+        icon: ua.achievement.icon
+      }))
+    }
+  }))
 } 

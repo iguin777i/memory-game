@@ -8,20 +8,43 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  name      String
-  email     String   @unique
-  phone     String
-  password  String
-  scores    Score[]
-  createdAt DateTime @default(now())
+  id          String       @id @default(uuid())
+  name        String
+  email       String       @unique
+  phone       String
+  password    String
+  scores      Score[]
+  achievements UserAchievement[]
+  createdAt   DateTime    @default(now())
 }
 
 model Score {
   id        String   @id @default(uuid())
   userId    String
   time      Float?   // Pode ser null quando não completado
+  points    Int      @default(0) // Pontuação baseada no tempo e conquistas
   completed Boolean  @default(false)
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id])
+}
+
+model Achievement {
+  id          String   @id @default(uuid())
+  name        String
+  description String
+  icon        String   // Emoji ou nome do ícone
+  points      Int      @default(100)
+  createdAt   DateTime @default(now())
+  users       UserAchievement[]
+}
+
+model UserAchievement {
+  id            String      @id @default(uuid())
+  userId        String
+  achievementId String
+  unlockedAt    DateTime    @default(now())
+  user          User        @relation(fields: [userId], references: [id])
+  achievement   Achievement @relation(fields: [achievementId], references: [id])
+
+  @@unique([userId, achievementId])
 }
