@@ -1,0 +1,27 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  phone     String
+  password  String
+  scores    Score[]
+  createdAt DateTime @default(now())
+}
+
+model Score {
+  id        String   @id @default(uuid())
+  userId    String
+  time      Float?   // Pode ser null quando não completado
+  completed Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+}
