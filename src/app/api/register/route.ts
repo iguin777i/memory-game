@@ -4,7 +4,12 @@ import { prisma } from '@/lib/server/prisma'
 export async function POST(request: Request) {
   try {
     const { name, email, phone } = await request.json()
-    const generatedPassword = Math.random().toString(36).slice(-8)
+    
+    // Gera uma letra maiúscula aleatória (A-Z)
+    const randomLetter = String.fromCharCode(65 + Math.floor(Math.random() * 26))
+    // Gera dois números aleatórios (00-99)
+    const randomNumbers = Math.floor(Math.random() * 100).toString().padStart(2, '0')
+    const generatedPassword = `${randomLetter}-${randomNumbers}`
 
     const user = await prisma.user.create({
       data: { name, email, phone, password: generatedPassword },

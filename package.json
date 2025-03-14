@@ -10,8 +10,11 @@
   },
   "dependencies": {
     "@prisma/client": "^6.5.0",
+    "@radix-ui/react-alert-dialog": "^1.1.6",
+    "@radix-ui/react-dialog": "^1.1.6",
     "@radix-ui/react-label": "^2.1.2",
     "@radix-ui/react-slot": "^1.1.2",
+    "@radix-ui/react-tooltip": "^1.1.8",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "framer-motion": "^12.5.0",
@@ -21,10 +24,12 @@
     "prisma": "^6.5.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "recharts": "^2.15.1",
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.1",
     "tailwind-merge": "^3.0.2",
-    "tailwindcss-animate": "^1.0.7"
+    "tailwindcss-animate": "^1.0.7",
+    "vaul": "^1.1.2"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

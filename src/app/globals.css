@@ -119,9 +119,9 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-family: 'Roboto', sans-serif;
+    font-family: 'Montserrat', sans-serif;
   }
   h1, h2, h3 {
-    color: #003087;
+    color: #008C77;
   }
 }

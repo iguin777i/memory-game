@@ -4,15 +4,41 @@ import { checkAchievements, calculatePoints } from '@/lib/achievements'
 
 export async function POST(request: Request) {
   try {
-    const { userId, time, completed, mistakes = 0 } = await request.json()
+    const body = await request.json()
+    console.log('Dados recebidos:', body) // Log dos dados recebidos
+
+    const { userId, time, completed, mistakes = 0 } = body
+
+    if (!userId) {
+      console.error('UserId não fornecido')
+      return NextResponse.json({ 
+        success: false, 
+        error: 'UserId não fornecido' 
+      }, { status: 400 })
+    }
 
     // Converte o userId para string
     const userIdString = String(userId)
+
+    // Verifica se o usuário existe
+    const userExists = await prisma.user.findUnique({
+      where: { id: userIdString }
+    })
+
+    if (!userExists) {
+      console.error('Usuário não encontrado:', userIdString)
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Usuário não encontrado' 
+      }, { status: 404 })
+    }
 
     // Busca a pontuação existente do usuário
     const existingScore = await prisma.score.findFirst({
       where: { userId: userIdString }
     })
+
+    console.log('Pontuação existente:', existingScore) // Log da pontuação existente
 
     // Verifica conquistas se o jogo foi completado
     const unlockedAchievements = completed ? 
@@ -64,6 +90,8 @@ export async function POST(request: Request) {
       })
     }
 
+    console.log('Pontuação salva:', score) // Log da pontuação salva
+
     await prisma.$disconnect()
 
     return NextResponse.json({ 
@@ -76,11 +104,12 @@ export async function POST(request: Request) {
           : 'Pontuação registrada com sucesso'
     })
   } catch (error) {
-    console.error('Erro:', error)
+    console.error('Erro detalhado:', error)
     await prisma.$disconnect()
     return NextResponse.json({ 
       success: false, 
-      error: 'Erro ao salvar pontuação' 
+      error: 'Erro ao salvar pontuação',
+      details: error instanceof Error ? error.message : String(error)
     }, { status: 500 })
   }
 }
@@ -89,55 +118,63 @@ export async function GET() {
   try {
     const scores = await getFormattedScores()
     await prisma.$disconnect()
-    return NextResponse.json(scores)
+    return NextResponse.json(scores || []) // Garante que retorna array vazio se não houver scores
   } catch (error) {
-    console.error('Erro:', error)
+    console.error('Erro ao buscar pontuações:', error)
     await prisma.$disconnect()
-    return NextResponse.json({ 
-      success: false, 
-      error: 'Erro ao buscar pontuações' 
-    }, { status: 500 })
+    return NextResponse.json([]) // Retorna array vazio em caso de erro
   }
 }
 
 async function getFormattedScores() {
-  const scores = await prisma.score.findMany({
-    where: {
-      OR: [
-        { completed: true },
-        { completed: false }
-      ]
-    },
-    orderBy: [
-      { points: 'desc' }, // Primeiro ordena por pontos
-      { completed: 'desc' }, // Depois por completados
-      { time: 'asc' } // Por fim por tempo
-    ],
-    take: 10,
-    include: {
-      user: {
-        select: {
-          name: true,
-          achievements: {
-            include: {
-              achievement: true
+  try {
+    const scores = await prisma.score.findMany({
+      where: {
+        OR: [
+          { completed: true },
+          { completed: false }
+        ]
+      },
+      orderBy: [
+        { points: 'desc' }, // Primeiro ordena por pontos
+        { completed: 'desc' }, // Depois por completados
+        { time: 'asc' } // Por fim por tempo
+      ],
+      take: 10,
+      include: {
+        user: {
+          select: {
+            name: true,
+            achievements: {
+              include: {
+                achievement: true
+              }
             }
           }
         }
       }
-    }
-  })
+    })
 
-  return scores.map(score => ({
-    ...score,
-    displayTime: score.completed ? `${score.time} segundos` : 'Não completou',
-    user: {
-      ...score.user,
-      achievements: score.user.achievements.map(ua => ({
-        name: ua.achievement.name,
-        description: ua.achievement.description,
-        icon: ua.achievement.icon
-      }))
-    }
-  }))
+    if (!scores) return []
+
+    return scores.map(score => ({
+      id: score.id,
+      userId: score.userId,
+      time: score.time,
+      points: score.points,
+      completed: score.completed,
+      displayTime: score.completed ? `${score.time} segundos` : 'Não completou',
+      user: {
+        name: score.user.name,
+        achievements: score.user.achievements.map(ua => ({
+          name: ua.achievement.name,
+          description: ua.achievement.description,
+          icon: ua.achievement.icon
+        }))
+      }
+    }))
+  } catch (error) {
+    console.error('Erro ao formatar scores:', error)
+    return []
+  }
 } 

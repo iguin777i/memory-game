@@ -1,7 +1,7 @@
 "use client";
 
 // src/app/game/page.tsx
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useRouter } from "next/navigation";
@@ -13,6 +13,13 @@ export default function Game() {
   const [flippedCards, setFlippedCards] = useState<number[]>([]);
   const [timeLeft, setTimeLeft] = useState(60);
   const [gameOver, setGameOver] = useState(false);
+  const [isChecking, setIsChecking] = useState(false);
+  const [scoreSaved, setScoreSaved] = useState(false);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const matchSoundRef = useRef<HTMLAudioElement | null>(null);
+  const tickRef = useRef<HTMLAudioElement | null>(null);
+  const alarmRef = useRef<HTMLAudioElement | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -24,32 +31,107 @@ export default function Game() {
   }, [router]);
 
   useEffect(() => {
-    const timer = setInterval(() => {
+    if (gameOver) {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+      return;
+    }
+
+    timerRef.current = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
-          clearInterval(timer);
+          if (timerRef.current) {
+            clearInterval(timerRef.current);
+          }
           setGameOver(true);
-          // Quando o tempo acabar, salva com completed = false
-          saveScore(60, false);
+          if (!scoreSaved) {
+            setScoreSaved(true);
+            saveScore(60, false).then(() => {
+              router.push("/ranking");
+            });
+          }
           return 0;
         }
         return prev - 1;
       });
     }, 1000);
-    return () => clearInterval(timer);
-  }, []);
+
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
+  }, [gameOver, router, scoreSaved]);
 
   useEffect(() => {
-    if (cards.every((card) => card.matched)) {
+    if (cards.every((card) => card.matched) && !scoreSaved) {
       const timeTaken = 60 - timeLeft;
-      // Quando completar o jogo, salva com completed = true
-      saveScore(timeTaken, true);
       setGameOver(true);
+      setScoreSaved(true);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+      saveScore(timeTaken, true).then(() => {
+        router.push("/ranking");
+      });
     }
-  }, [cards, timeLeft]);
+  }, [cards, timeLeft, router, scoreSaved]);
+
+  // Inicializa os áudios
+  useEffect(() => {
+    matchSoundRef.current = new Audio('/select-sound-121244.mp3');
+    tickRef.current = new Audio('/ticking-clock-1-wav-edition-264449.mp3');
+    alarmRef.current = new Audio('/alarm-sound-37359.mp3');
+    
+    if (matchSoundRef.current) {
+      matchSoundRef.current.volume = 1.0;
+      // Pré-carrega o som
+      matchSoundRef.current.load();
+    }
+
+    if (tickRef.current) {
+      tickRef.current.loop = true;
+      tickRef.current.volume = 0.2;
+      tickRef.current.play().catch(e => console.log('Aguardando interação do usuário para tocar o som'));
+    }
+    
+    return () => {
+      if (matchSoundRef.current) {
+        matchSoundRef.current.pause();
+        matchSoundRef.current.currentTime = 0;
+      }
+      if (tickRef.current) {
+        tickRef.current.pause();
+        tickRef.current.currentTime = 0;
+      }
+      if (alarmRef.current) {
+        alarmRef.current.pause();
+        alarmRef.current.currentTime = 0;
+      }
+    };
+  }, []);
+
+  // Gerencia o áudio baseado no tempo
+  useEffect(() => {
+    if (gameOver || timeLeft === 0) {
+      if (tickRef.current) {
+        tickRef.current.pause();
+        tickRef.current.currentTime = 0;
+      }
+      if (timeLeft === 0 && alarmRef.current) {
+        alarmRef.current.play().catch(e => console.log('Erro ao tocar alarme'));
+      }
+    }
+  }, [timeLeft, gameOver]);
 
   const handleCardClick = (id: number) => {
-    if (flippedCards.length === 2 || gameOver) return;
+    if (flippedCards.length === 2 || gameOver || isChecking) return;
+    
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+
     const newCards = cards.map((card) =>
       card.id === id && !card.flipped && !card.matched ? { ...card, flipped: true } : card
     );
@@ -57,20 +139,42 @@ export default function Game() {
     setFlippedCards([...flippedCards, id]);
 
     if (flippedCards.length === 1) {
+      setIsChecking(true);
       const [firstCardId] = flippedCards;
       const firstCard = cards.find((c) => c.id === firstCardId);
       const secondCard = cards.find((c) => c.id === id);
+
       if (firstCard?.value === secondCard?.value) {
         setCards((prev) =>
           prev.map((card) => (card.id === firstCardId || card.id === id ? { ...card, matched: true } : card))
         );
-      }
-      setTimeout(() => {
-        setCards((prev) =>
-          prev.map((card) => (card.flipped && !card.matched ? { ...card, flipped: false } : card))
-        );
+        // Toca o som quando encontrar um par
+        if (matchSoundRef.current) {
+          try {
+            matchSoundRef.current.currentTime = 0;
+            const playPromise = matchSoundRef.current.play();
+            if (playPromise !== undefined) {
+              playPromise.catch(e => {
+                console.error('Erro ao tocar som de match:', e);
+                // Tenta tocar novamente
+                setTimeout(() => matchSoundRef.current?.play(), 100);
+              });
+            }
+          } catch (error) {
+            console.error('Erro ao tocar som de match:', error);
+          }
+        }
+        setIsChecking(false);
         setFlippedCards([]);
-      }, 1000);
+      } else {
+        timeoutRef.current = setTimeout(() => {
+          setCards((prev) =>
+            prev.map((card) => (card.flipped && !card.matched ? { ...card, flipped: false } : card))
+          );
+          setFlippedCards([]);
+          setIsChecking(false);
+        }, 1000);
+      }
     }
   };
 
@@ -78,58 +182,71 @@ export default function Game() {
     try {
       const userId = localStorage.getItem('userId');
       if (!userId) {
-        throw new Error('Usuário não encontrado');
+        console.error('UserId não encontrado no localStorage');
+        router.push('/register');
+        return;
       }
 
-      console.log('Enviando score:', { userId, time, completed }); // Debug
+      const scoreData = {
+        userId,
+        time: Number(time.toFixed(1)),
+        completed,
+        mistakes: 0
+      };
 
       const response = await fetch('/api/scores', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          userId, // Não converte para número
-          time,
-          completed
-        }),
+        body: JSON.stringify(scoreData),
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Erro detalhado:', errorData); // Debug
-        throw new Error('Erro ao salvar pontuação');
+        const data = await response.json();
+        throw new Error(data.error || 'Erro ao salvar pontuação');
       }
 
-      const data = await response.json();
-      console.log('Resposta do servidor:', data);
     } catch (error) {
       console.error('Erro ao salvar pontuação:', error);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6">
+    <div className="flex min-h-svh flex-col items-center justify-center gap-6 bg-background p-6 md:p-10">
       <h1 className="text-3xl font-bold text-[#003087] mb-4">Jogo da Memória</h1>
-      <p className="text-lg">Tempo restante: {timeLeft}s</p>
-      <div className="grid grid-cols-4 gap-4 mt-4">
+      <p className={`text-lg mb-6 ${timeLeft <= 10 ? 'text-red-600 font-bold animate-pulse' : ''}`}>
+        Tempo restante: {timeLeft}s
+      </p>
+      <div className="grid grid-cols-4 gap-6 mt-4 max-w-4xl mx-auto">
         {cards.map((card) => (
           <Card
             key={card.id}
-            className={`h-24 flex items-center justify-center cursor-pointer ${
-              card.flipped || card.matched ? "bg-[#003087] text-white" : "bg-white"
-            }`}
+            className={`h-40 flex items-center justify-center cursor-pointer transition-all duration-300 transform hover:scale-105 ${
+              card.flipped || card.matched ? "bg-[#003087] text-white text-4xl font-bold" : "bg-white"
+            } ${isChecking ? "pointer-events-none" : ""}`}
             onClick={() => handleCardClick(card.id)}
           >
-            {card.flipped || card.matched ? card.value : "?"}
+            {card.flipped || card.matched ? (
+              <span className="transform scale-150">{card.value}</span>
+            ) : (
+              <div className="w-full h-full flex items-center justify-center p-4">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 46 28" fill="none" className="w-full h-full max-w-[80%] max-h-[80%]">
+                  <g clipPath="url(#clip0_914_710)">
+                    <path d="M21.0159 27.9815V21.9229H9.98461L16.1403 15.8198C16.6787 15.4043 17.025 14.7624 17.025 14.0353C17.025 13.3081 16.69 12.6848 16.1629 12.2692L9.90932 6.0326H21.0121V0.0111335H3.53151C3.50139 0.0111335 3.47504 0.0074234 3.44868 0.0074234C1.54362 0.0074234 0 1.53598 0 3.41699C0 4.40016 0.421673 5.27945 1.09183 5.90275L1.0843 5.9213L9.10738 14.0167L1.0843 22.1752C0.459322 22.7948 0.0715338 23.6481 0.0715338 24.5904C0.0715338 26.4752 1.61516 28 3.51645 28C3.63316 28 3.74611 27.9926 3.85906 27.9815H21.0159Z" fill="#008C77" />
+                    <path d="M24.0918 6.38876L37.0921 13.7941L24.1407 21.5556L24.1633 27.9703L44.0799 16.9291V16.9217C45.2282 16.3095 46.0037 15.126 46 13.7718C45.9962 12.3805 45.1717 11.1822 43.9707 10.5886L24.0692 0L24.0918 6.38876Z" fill="#214B63" />
+                  </g>
+                  <defs>
+                    <clipPath id="clip0_914_710">
+                      <rect width="46" height="28" fill="white" />
+                    </clipPath>
+                  </defs>
+                </svg>
+              </div>
+            )}
           </Card>
         ))}
       </div>
-      {gameOver && (
-        <Button className="mt-4 bg-[#003087]" onClick={() => router.push("/ranking")}>
-          Ver Ranking
-        </Button>
-      )}
     </div>
   );
 }
