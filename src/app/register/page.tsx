@@ -162,7 +162,7 @@ export default function Register({
                   required
                   value={loginPassword}
                   onChange={(e) => {
-                    let value = e.target.value.toUpperCase();
+                    const value = e.target.value.toUpperCase();
                     
                     // Se estiver apagando, permite
                     if (value.length < loginPassword.length) {
