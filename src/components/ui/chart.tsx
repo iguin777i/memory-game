@@ -1,13 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, LabelList } from "recharts"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
+import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, LabelList, Tooltip } from "recharts"
 
 interface ChartDataItem {
   name: string;
@@ -48,10 +42,10 @@ export function Chart({ data, onSelectUser }: ChartProps) {
         />
         <Bar
           dataKey="points"
-          fill={(data) => data.fill}
+          fill="#003087"
           radius={[0, 4, 4, 0]}
           className="cursor-pointer"
-          onClick={(data) => onSelectUser(data.userId)}
+          onClick={(data: ChartDataItem) => onSelectUser(data.userId)}
           minPointSize={5}
         >
           <LabelList

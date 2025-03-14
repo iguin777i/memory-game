@@ -2,6 +2,24 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/server/prisma'
 import { checkAchievements, calculatePoints } from '@/lib/achievements'
 
+interface Score {
+  id: string;
+  userId: string;
+  time: number | null;
+  points: number;
+  completed: boolean;
+  user: {
+    name: string;
+    achievements: Array<{
+      achievement: {
+        name: string;
+        description: string;
+        icon: string;
+      }
+    }>;
+  };
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json()
@@ -157,7 +175,7 @@ async function getFormattedScores() {
 
     if (!scores) return []
 
-    return scores.map(score => ({
+    return scores.map((score: Score) => ({
       id: score.id,
       userId: score.userId,
       time: score.time,

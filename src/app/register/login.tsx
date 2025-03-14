@@ -15,7 +15,6 @@ export function Register({
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [phone, setPhone] = useState("");
-    const [password, setPassword] = useState("");
     const router = useRouter();
 
     const handleSubmit = async (e: FormEvent) => {
@@ -32,7 +31,6 @@ export function Register({
             const data = await response.json();
 
             if (data.success) {
-                setPassword(data.password);
                 localStorage.setItem('userId', data.userId.toString());
                 alert(`Cadastro realizado! Sua senha é: ${data.password}`);
                 router.push("/game");

@@ -1,10 +1,10 @@
 "use client";
 
 // src/app/game/page.tsx
-import { useState, useEffect, useRef } from "react";
-import { Button } from "@/components/ui/button";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Card } from "@/components/ui/card";
 import { useRouter } from "next/navigation";
+import { LoadingScreen } from "@/components/ui/loading-screen";
 
 type CardType = { id: number; value: string; flipped: boolean; matched: boolean };
 
@@ -15,12 +15,52 @@ export default function Game() {
   const [gameOver, setGameOver] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
   const [scoreSaved, setScoreSaved] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const matchSoundRef = useRef<HTMLAudioElement | null>(null);
   const tickRef = useRef<HTMLAudioElement | null>(null);
   const alarmRef = useRef<HTMLAudioElement | null>(null);
   const router = useRouter();
+
+  const saveScore = useCallback(async (time: number, completed: boolean) => {
+    try {
+      const userId = localStorage.getItem('userId');
+      if (!userId) {
+        console.error('UserId não encontrado no localStorage');
+        router.push('/register');
+        return;
+      }
+
+      const scoreData = {
+        userId,
+        time: Number(time.toFixed(1)),
+        completed,
+        mistakes: 0
+      };
+
+      const response = await fetch('/api/scores', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(scoreData),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Erro ao salvar pontuação');
+      }
+
+      setIsLoading(true);
+      setTimeout(() => {
+        router.push("/ranking");
+      }, 1500);
+
+    } catch (error) {
+      console.error('Erro ao salvar pontuação:', error);
+    }
+  }, [router]);
 
   useEffect(() => {
     // Verifica se o usuário está logado
@@ -48,7 +88,10 @@ export default function Game() {
           if (!scoreSaved) {
             setScoreSaved(true);
             saveScore(60, false).then(() => {
-              router.push("/ranking");
+              setIsLoading(true);
+              setTimeout(() => {
+                router.push("/ranking");
+              }, 1500);
             });
           }
           return 0;
@@ -62,7 +105,7 @@ export default function Game() {
         clearInterval(timerRef.current);
       }
     };
-  }, [gameOver, router, scoreSaved]);
+  }, [gameOver, router, scoreSaved, saveScore]);
 
   useEffect(() => {
     if (cards.every((card) => card.matched) && !scoreSaved) {
@@ -76,7 +119,7 @@ export default function Game() {
         router.push("/ranking");
       });
     }
-  }, [cards, timeLeft, router, scoreSaved]);
+  }, [cards, timeLeft, router, scoreSaved, saveScore]);
 
   // Inicializa os áudios
   useEffect(() => {
@@ -86,14 +129,13 @@ export default function Game() {
     
     if (matchSoundRef.current) {
       matchSoundRef.current.volume = 1.0;
-      // Pré-carrega o som
       matchSoundRef.current.load();
     }
 
     if (tickRef.current) {
       tickRef.current.loop = true;
       tickRef.current.volume = 0.2;
-      tickRef.current.play().catch(e => console.log('Aguardando interação do usuário para tocar o som'));
+      tickRef.current.play().catch(() => console.log('Aguardando interação do usuário para tocar o som'));
     }
     
     return () => {
@@ -120,7 +162,7 @@ export default function Game() {
         tickRef.current.currentTime = 0;
       }
       if (timeLeft === 0 && alarmRef.current) {
-        alarmRef.current.play().catch(e => console.log('Erro ao tocar alarme'));
+        alarmRef.current.play().catch(() => console.log('Erro ao tocar alarme'));
       }
     }
   }, [timeLeft, gameOver]);
@@ -178,42 +220,9 @@ export default function Game() {
     }
   };
 
-  const saveScore = async (time: number, completed: boolean) => {
-    try {
-      const userId = localStorage.getItem('userId');
-      if (!userId) {
-        console.error('UserId não encontrado no localStorage');
-        router.push('/register');
-        return;
-      }
-
-      const scoreData = {
-        userId,
-        time: Number(time.toFixed(1)),
-        completed,
-        mistakes: 0
-      };
-
-      const response = await fetch('/api/scores', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(scoreData),
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Erro ao salvar pontuação');
-      }
-
-    } catch (error) {
-      console.error('Erro ao salvar pontuação:', error);
-    }
-  };
-
   return (
     <div className="flex min-h-svh flex-col items-center justify-center gap-6 bg-background p-6 md:p-10">
+      {isLoading && <LoadingScreen />}
       <h1 className="text-3xl font-bold text-[#003087] mb-4">Jogo da Memória</h1>
       <p className={`text-lg mb-6 ${timeLeft <= 10 ? 'text-red-600 font-bold animate-pulse' : ''}`}>
         Tempo restante: {timeLeft}s
@@ -222,15 +231,15 @@ export default function Game() {
         {cards.map((card) => (
           <Card
             key={card.id}
-            className={`h-40 flex items-center justify-center cursor-pointer transition-all duration-300 transform hover:scale-105 ${
-              card.flipped || card.matched ? "bg-[#003087] text-white text-4xl font-bold" : "bg-white"
+            className={`w-[160px] h-[160px] flex items-center justify-center cursor-pointer transition-all duration-300 transform hover:scale-105 ${
+              card.flipped || card.matched ? "bg-[#003087]" : "bg-white"
             } ${isChecking ? "pointer-events-none" : ""}`}
             onClick={() => handleCardClick(card.id)}
           >
             {card.flipped || card.matched ? (
-              <span className="transform scale-150">{card.value}</span>
+              <span className="text-5xl font-bold text-white transition-all duration-300">{card.value}</span>
             ) : (
-              <div className="w-full h-full flex items-center justify-center p-4">
+              <div className="w-full h-full flex items-center justify-center p-4 transition-all duration-300">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 46 28" fill="none" className="w-full h-full max-w-[80%] max-h-[80%]">
                   <g clipPath="url(#clip0_914_710)">
                     <path d="M21.0159 27.9815V21.9229H9.98461L16.1403 15.8198C16.6787 15.4043 17.025 14.7624 17.025 14.0353C17.025 13.3081 16.69 12.6848 16.1629 12.2692L9.90932 6.0326H21.0121V0.0111335H3.53151C3.50139 0.0111335 3.47504 0.0074234 3.44868 0.0074234C1.54362 0.0074234 0 1.53598 0 3.41699C0 4.40016 0.421673 5.27945 1.09183 5.90275L1.0843 5.9213L9.10738 14.0167L1.0843 22.1752C0.459322 22.7948 0.0715338 23.6481 0.0715338 24.5904C0.0715338 26.4752 1.61516 28 3.51645 28C3.63316 28 3.74611 27.9926 3.85906 27.9815H21.0159Z" fill="#008C77" />
@@ -247,6 +256,22 @@ export default function Game() {
           </Card>
         ))}
       </div>
+
+      <style jsx global>{`
+        .perspective-1000 {
+          perspective: 1000px;
+        }
+        .backface-hidden {
+          backface-visibility: hidden;
+          -webkit-backface-visibility: hidden;
+        }
+        .rotate-y-180 {
+          transform: rotateY(180deg);
+        }
+        .rotate-y-0 {
+          transform: rotateY(0deg);
+        }
+      `}</style>
     </div>
   );
 }
