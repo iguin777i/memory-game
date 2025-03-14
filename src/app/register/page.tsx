@@ -158,10 +158,32 @@ export default function Register({
                 <Input
                   id="login-password"
                   type="text"
-                  placeholder="Digite sua senha"
+                  placeholder="Digite sua senha (ex: A-12)"
                   required
                   value={loginPassword}
-                  onChange={(e) => setLoginPassword(e.target.value)}
+                  onChange={(e) => {
+                    let value = e.target.value.toUpperCase();
+                    
+                    // Se estiver apagando, permite
+                    if (value.length < loginPassword.length) {
+                      setLoginPassword(value);
+                      return;
+                    }
+
+                    // Validação para digitação
+                    if (value.length === 1) {
+                      // Primeira posição só aceita letra
+                      if (/^[A-Z]$/.test(value)) {
+                        setLoginPassword(value + '-');
+                      }
+                    } else if (value.length > 1) {
+                      // Após o hífen, só aceita números
+                      if (/^[A-Z]-\d{0,2}$/.test(value)) {
+                        setLoginPassword(value);
+                      }
+                    }
+                  }}
+                  maxLength={4}
                   disabled={loading}
                 />
               </div>
