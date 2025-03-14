@@ -13,8 +13,17 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { toast } from "react-hot-toast";
 
-import { FormEvent, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 export default function Register({
@@ -26,6 +35,9 @@ export default function Register({
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [showLoginDialog, setShowLoginDialog] = useState(false);
+  const [loginPassword, setLoginPassword] = useState("");
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
 
   const formatPhone = (value: string) => {
@@ -61,34 +73,116 @@ export default function Register({
     setPhone(formatted)
   }
 
-  const handleSubmit = async (e: FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
+
     try {
-      const response = await fetch('/api/register', {
-        method: 'POST',
+      const response = await fetch("/api/register", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ name, email, phone }),
       });
 
       const data = await response.json();
 
-      if (data.success) {
-        setPassword(data.password);
-        localStorage.setItem('userId', data.userId.toString());
-        setShowPassword(true);
-      } else {
-        alert('Erro ao realizar cadastro');
+      if (response.status === 409) {
+        // Usuário já existe
+        setShowLoginDialog(true);
+        return;
       }
+
+      if (!response.ok) {
+        throw new Error(data.error || "Algo deu errado");
+      }
+
+      // Registro bem sucedido
+      setPassword(data.password);
+      localStorage.setItem('userId', data.userId.toString());
+      setShowPassword(true);
     } catch (error) {
-      console.error('Erro:', error);
-      alert('Erro ao realizar cadastro');
+      console.error("Erro ao registrar:", error);
+      toast.error("Erro ao registrar usuário");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const response = await fetch("/api/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password: loginPassword }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Credenciais inválidas");
+      }
+
+      // Login bem sucedido
+      localStorage.setItem('userId', data.userId.toString());
+      setShowLoginDialog(false);
+      router.push("/game");
+    } catch (error) {
+      console.error("Erro ao fazer login:", error);
+      toast.error(error instanceof Error ? error.message : "Senha incorreta");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div className="flex min-h-svh flex-col items-center justify-center gap-6 bg-background p-6 md:p-10">
+      <Dialog open={showLoginDialog} onOpenChange={setShowLoginDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Bem-vindo de volta! 👋</DialogTitle>
+            <DialogDescription>
+              Este email já está registrado. Por favor, insira sua senha para continuar.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleLogin}>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="login-password">Senha</Label>
+                <Input
+                  id="login-password"
+                  type="text"
+                  placeholder="Digite sua senha"
+                  required
+                  value={loginPassword}
+                  onChange={(e) => setLoginPassword(e.target.value)}
+                  disabled={loading}
+                />
+              </div>
+            </div>
+            <DialogFooter className="gap-2">
+              <Button type="submit" disabled={loading}>
+                {loading ? "Entrando..." : "Entrar"}
+              </Button>
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => setShowLoginDialog(false)}
+                disabled={loading}
+              >
+                Cancelar
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
       <Drawer open={showPassword} onOpenChange={setShowPassword}>
         <DrawerContent>
           <div className="mx-auto w-full max-w-sm">
@@ -125,10 +219,7 @@ export default function Register({
           <form onSubmit={handleSubmit}>
             <div className="flex flex-col gap-6">
               <div className="flex flex-col items-center gap-2">
-                <a
-                  href="#"
-                  className="flex flex-col items-center gap-2 font-medium"
-                >
+                <a href="#" className="flex flex-col items-center gap-2 font-medium">
                   <div className="flex size-8 items-center justify-center rounded-md">
                     <svg xmlns="http://www.w3.org/2000/svg" width="46" height="28" viewBox="0 0 46 28" fill="none">
                       <g clipPath="url(#clip0_914_710)">
@@ -144,8 +235,12 @@ export default function Register({
                   </div>
                   <span className="sr-only">Acme Inc.</span>
                 </a>
-                <h1 className="text-xl font-bold text-center">Olá, Seja bem vindo ao nosso jogo da memória👋</h1>
-                <p className="text-sm text-center">Coloque seus dados para continuar</p>
+                <h1 className="text-xl font-bold text-center">
+                  Olá, Seja bem vindo ao nosso jogo da memória👋
+                </h1>
+                <p className="text-sm text-center">
+                  Coloque seus dados para continuar
+                </p>
               </div>
               <div className="flex flex-col gap-6">
                 <div className="grid gap-3">
@@ -182,8 +277,7 @@ export default function Register({
                     maxLength={15}
                   />
                 </div>
-
-                <Button type="submit" className="w-full">
+                <Button type="submit" className="w-full" disabled={loading}>
                   Continuar
                 </Button>
               </div>
