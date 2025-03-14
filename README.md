@@ -1,36 +1,24 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+<!--- # "Can be a image or a gift from the project pages" -->
 
-## Getting Started
+<p align="center">
+  <img src="https://prd-pc1.lg.com.br/Vagas/c/14E91D1E-3320-4B26-84F9-F5C0345F5B12/p/PortalCarreirasMV/pt-BR/ProvedorDeInformacoes/ObtenhaLogoDoPortal" alt="Project Name">
 
-First, run the development server:
+</p>
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+# Jogo da memória | MV Saúde Digital
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Jogo da memória desenvolvido em NextJs, com banco de dados rodando em prisma e Neon. 
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Tecnologias de projeot
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+<!--- # "Verify icons availability here https://github.com/tandpfun/skill-icons" -->
 
-## Learn More
+[![My Skills](https://skillicons.dev/icons?i=ts,nextjs,prisma,postgres,react,tailwind,github,vercel,)](https://skillicons.dev)
 
-To learn more about Next.js, take a look at the following resources:
+## Como rodar o projeto localmente
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. **Instale as dependencias**: `npm install or yarn`
+2. **Variaveis de ambiente**: Copie `.env.example` para o seu novo `.env.local`
+3. **Iniciar banco de dados**: `npx prisma migrate dev --name init`
+4. **Imiciar aplicaçãp**: `npm run dev (frontend)`
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
