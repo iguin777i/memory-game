@@ -141,6 +141,43 @@ export default function Register({
     }
   };
 
+  const handleGenerateNewPassword = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch("/api/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ 
+          email, 
+          name, 
+          phone,
+          generateNewPassword: true 
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Erro ao gerar nova senha");
+      }
+
+      // Atualiza a senha e mostra no modal
+      setPassword(data.password);
+      setShowLoginDialog(false);
+      setShowPassword(true);
+      localStorage.setItem('userId', data.userId.toString());
+      
+      toast.success("Nova senha gerada com sucesso!");
+    } catch (error) {
+      console.error("Erro ao gerar nova senha:", error);
+      toast.error("Erro ao gerar nova senha");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="flex min-h-svh flex-col items-center justify-center gap-6 bg-background p-6 md:p-10">
       <Dialog open={showLoginDialog} onOpenChange={setShowLoginDialog}>
@@ -186,6 +223,11 @@ export default function Register({
                   maxLength={4}
                   disabled={loading}
                 />
+                <p className="text-sm text-muted-foreground mt-2">
+                  Esqueceu sua senha? <Button type="button" variant="link" className="p-0 h-auto font-normal" onClick={handleGenerateNewPassword} disabled={loading}>
+                    Gerar nova senha
+                  </Button>
+                </p>
               </div>
             </div>
             <DialogFooter className="gap-2">

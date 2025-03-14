@@ -3,7 +3,7 @@ import { prisma } from '@/lib/server/prisma'
 
 export async function POST(request: Request) {
   try {
-    const { name, email, phone, password: providedPassword } = await request.json()
+    const { name, email, phone, generateNewPassword } = await request.json()
     
     // Verifica se o usuário já existe
     const existingUser = await prisma.user.findUnique({
@@ -21,26 +21,27 @@ export async function POST(request: Request) {
       }
     })
 
-    // Se o usuário existe e uma senha foi fornecida
-    if (existingUser && providedPassword) {
-      // Verifica se a senha está correta
-      if (existingUser.password === providedPassword) {
-        return NextResponse.json({ 
-          success: true,
-          userId: existingUser.id,
-          bestTime: existingUser.scores[0]?.time || null,
-          isExisting: true
-        })
-      } else {
-        return NextResponse.json({ 
-          success: false, 
-          error: 'Senha incorreta',
-          isExisting: true
-        }, { status: 401 })
-      }
+    // Se o usuário existe e está solicitando uma nova senha
+    if (existingUser && generateNewPassword) {
+      const randomLetter = String.fromCharCode(65 + Math.floor(Math.random() * 26))
+      const randomNumbers = Math.floor(Math.random() * 100).toString().padStart(2, '0')
+      const newPassword = `${randomLetter}-${randomNumbers}`
+
+      // Atualiza a senha do usuário
+      const updatedUser = await prisma.user.update({
+        where: { email },
+        data: { password: newPassword }
+      })
+
+      return NextResponse.json({ 
+        success: true,
+        password: newPassword,
+        userId: updatedUser.id,
+        isExisting: true
+      })
     }
 
-    // Se o usuário existe mas nenhuma senha foi fornecida
+    // Se o usuário existe e uma senha foi fornecida
     if (existingUser) {
       return NextResponse.json({ 
         success: false, 
