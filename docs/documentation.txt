@@ -1,0 +1,59 @@
+📚 Documentação do Projeto Memory Game 🎮
+
+🔧 Tecnologias Principais:
+    - Next.js: Framework React para desenvolvimento web
+    - Prisma: ORM para gerenciamento do banco de dados
+    - TypeScript: Superset do JavaScript com tipagem estática
+
+📂 Estrutura de Pastas:
+
+    📂 app/
+        📂 api/ - Endpoints da API
+        📂 components/ - Componentes reutilizáveis
+        📂 game/ - Páginas e lógica do jogo
+        📂 layout.tsx - Layout principal da aplicação
+        📂 page.tsx - Página inicial
+
+    📂 prisma/
+        📄 schema.prisma - Definição do modelo de dados
+        📂 migrations/ - Histórico de alterações no banco de dados
+
+    📂 public/ - Arquivos estáticos (imagens, fontes, etc.)
+
+    📂 styles/ - Arquivos de estilo CSS
+
+    📄 .env - Variáveis de ambiente (não versionado)
+    📄 .gitignore - Arquivos ignorados pelo Git
+    📄 package.json - Dependências e scripts do projeto
+    📄 README.md - Documentação principal do projeto
+
+🔍 Detalhes Importantes:
+
+    🗄️ Prisma:
+        - Interface entre o código e o banco de dados
+        - schema.prisma: Define as tabelas e relacionamentos
+        - migrations: Registra alterações no banco de dados
+        - Facilita operações CRUD e queries
+
+    🎮 Game:
+        - Implementação da lógica do jogo
+        - Gerenciamento de estado
+        - Interface do usuário
+        - Sistema de pontuação
+
+    🌐 API:
+        - Endpoints para interação com o backend
+        - Gerenciamento de dados
+        - Autenticação (se necessário)
+
+    🎨 UI/UX:
+        - Componentes reutilizáveis
+        - Estilos e layouts
+        - Responsividade
+        - Animações e transições
+
+📝 Notas de Desenvolvimento:
+    - O projeto utiliza TypeScript para maior segurança e manutenibilidade
+    - A estrutura segue as melhores práticas do Next.js 13+
+    - O Prisma é utilizado para todas as operações de banco de dados
+    - O jogo é implementado com foco em performance e experiência do usuário 

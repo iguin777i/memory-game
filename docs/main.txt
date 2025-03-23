@@ -1,0 +1,7 @@
+-> PRISMA: Banco de dados, o Prisma é uma especie de 'ponte' para simplificar 'interpretação' do 
+banco de dados. 
+    -schema.primsa: Define as tabelas que devem ser criadas no banco de dados 
+    -migrations: Regista as mudanças do banco de dados. 
+
+-> 📂 App: Pasta principal do projeto: 
+    - 📂 api: Pasta onde adimi
