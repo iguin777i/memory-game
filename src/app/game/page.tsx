@@ -1,30 +1,38 @@
+// Indica que este é um componente do lado do cliente
 "use client";
 
-// src/app/game/page.tsx
+// Importações necessárias do React e Next.js
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Card } from "@/components/ui/card";
 import { useRouter } from "next/navigation";
 import { LoadingScreen } from "@/components/ui/loading-screen";
 
+// Define o tipo de uma carta do jogo
 type CardType = { id: number; value: string; flipped: boolean; matched: boolean };
 
+// Componente principal do jogo
 export default function Game() {
-  const [cards, setCards] = useState<CardType[]>(generateCards());
-  const [flippedCards, setFlippedCards] = useState<number[]>([]);
-  const [timeLeft, setTimeLeft] = useState(60);
-  const [gameOver, setGameOver] = useState(false);
-  const [isChecking, setIsChecking] = useState(false);
-  const [scoreSaved, setScoreSaved] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const matchSoundRef = useRef<HTMLAudioElement | null>(null);
-  const tickRef = useRef<HTMLAudioElement | null>(null);
-  const alarmRef = useRef<HTMLAudioElement | null>(null);
+  // Estados do jogo
+  const [cards, setCards] = useState<CardType[]>(generateCards()); // Array de cartas
+  const [flippedCards, setFlippedCards] = useState<number[]>([]); // IDs das cartas viradas
+  const [timeLeft, setTimeLeft] = useState(60); // Tempo restante em segundos
+  const [gameOver, setGameOver] = useState(false); // Estado de fim de jogo
+  const [isChecking, setIsChecking] = useState(false); // Estado de verificação de cartas
+  const [scoreSaved, setScoreSaved] = useState(false); // Estado de salvamento da pontuação
+  const [isLoading, setIsLoading] = useState(false); // Estado de carregamento
+
+  // Referências para timers e sons
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null); // Timer para virar cartas
+  const timerRef = useRef<NodeJS.Timeout | null>(null); // Timer do jogo
+  const matchSoundRef = useRef<HTMLAudioElement | null>(null); // Som de match
+  const tickRef = useRef<HTMLAudioElement | null>(null); // Som do relógio
+  const alarmRef = useRef<HTMLAudioElement | null>(null); // Som do alarme
   const router = useRouter();
 
+  // Função para salvar a pontuação do jogador
   const saveScore = useCallback(async (time: number, completed: boolean) => {
     try {
+      // Verifica se o usuário está logado
       const userId = localStorage.getItem('userId');
       if (!userId) {
         console.error('UserId não encontrado no localStorage');
@@ -32,6 +40,7 @@ export default function Game() {
         return;
       }
 
+      // Prepara os dados da pontuação
       const scoreData = {
         userId,
         time: Number(time.toFixed(1)),
@@ -39,6 +48,7 @@ export default function Game() {
         mistakes: 0
       };
 
+      // Envia a pontuação para a API
       const response = await fetch('/api/scores', {
         method: 'POST',
         headers: {
@@ -47,11 +57,13 @@ export default function Game() {
         body: JSON.stringify(scoreData),
       });
 
+      // Trata erros da API
       if (!response.ok) {
         const data = await response.json();
         throw new Error(data.error || 'Erro ao salvar pontuação');
       }
 
+      // Redireciona para a página de ranking
       setIsLoading(true);
       setTimeout(() => {
         router.push("/ranking");
@@ -62,14 +74,15 @@ export default function Game() {
     }
   }, [router]);
 
+  // Verifica se o usuário está logado ao iniciar
   useEffect(() => {
-    // Verifica se o usuário está logado
     const userId = localStorage.getItem('userId');
     if (!userId) {
       router.push('/register');
     }
   }, [router]);
 
+  // Timer do jogo
   useEffect(() => {
     if (gameOver) {
       if (timerRef.current) {
@@ -78,6 +91,7 @@ export default function Game() {
       return;
     }
 
+    // Atualiza o tempo a cada segundo
     timerRef.current = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
@@ -100,6 +114,7 @@ export default function Game() {
       });
     }, 1000);
 
+    // Limpa o timer ao desmontar o componente
     return () => {
       if (timerRef.current) {
         clearInterval(timerRef.current);
@@ -107,6 +122,7 @@ export default function Game() {
     };
   }, [gameOver, router, scoreSaved, saveScore]);
 
+  // Verifica se todas as cartas foram combinadas
   useEffect(() => {
     if (cards.every((card) => card.matched) && !scoreSaved) {
       const timeTaken = 60 - timeLeft;
@@ -121,12 +137,13 @@ export default function Game() {
     }
   }, [cards, timeLeft, router, scoreSaved, saveScore]);
 
-  // Inicializa os áudios
+  // Inicializa os sons do jogo
   useEffect(() => {
     matchSoundRef.current = new Audio('/select-sound-121244.mp3');
     tickRef.current = new Audio('/ticking-clock-1-wav-edition-264449.mp3');
     alarmRef.current = new Audio('/alarm-sound-37359.mp3');
     
+    // Configura os volumes e carrega os sons
     if (matchSoundRef.current) {
       matchSoundRef.current.volume = 1.0;
       matchSoundRef.current.load();
@@ -138,6 +155,7 @@ export default function Game() {
       tickRef.current.play().catch(() => console.log('Aguardando interação do usuário para tocar o som'));
     }
     
+    // Limpa os sons ao desmontar o componente
     return () => {
       if (matchSoundRef.current) {
         matchSoundRef.current.pause();
@@ -154,7 +172,7 @@ export default function Game() {
     };
   }, []);
 
-  // Gerencia o áudio baseado no tempo
+  // Gerencia os sons baseado no tempo
   useEffect(() => {
     if (gameOver || timeLeft === 0) {
       if (tickRef.current) {
@@ -167,6 +185,7 @@ export default function Game() {
     }
   }, [timeLeft, gameOver]);
 
+  // Função para lidar com o clique nas cartas
   const handleCardClick = (id: number) => {
     if (flippedCards.length === 2 || gameOver || isChecking) return;
     
@@ -174,23 +193,26 @@ export default function Game() {
       clearTimeout(timeoutRef.current);
     }
 
+    // Vira a carta clicada
     const newCards = cards.map((card) =>
       card.id === id && !card.flipped && !card.matched ? { ...card, flipped: true } : card
     );
     setCards(newCards);
     setFlippedCards([...flippedCards, id]);
 
+    // Verifica se há duas cartas viradas
     if (flippedCards.length === 1) {
       setIsChecking(true);
       const [firstCardId] = flippedCards;
       const firstCard = cards.find((c) => c.id === firstCardId);
       const secondCard = cards.find((c) => c.id === id);
 
+      // Verifica se as cartas combinam
       if (firstCard?.value === secondCard?.value) {
         setCards((prev) =>
           prev.map((card) => (card.id === firstCardId || card.id === id ? { ...card, matched: true } : card))
         );
-        // Toca o som quando encontrar um par
+        // Toca o som de match
         if (matchSoundRef.current) {
           try {
             matchSoundRef.current.currentTime = 0;
@@ -198,7 +220,6 @@ export default function Game() {
             if (playPromise !== undefined) {
               playPromise.catch(e => {
                 console.error('Erro ao tocar som de match:', e);
-                // Tenta tocar novamente
                 setTimeout(() => matchSoundRef.current?.play(), 100);
               });
             }
@@ -209,6 +230,7 @@ export default function Game() {
         setIsChecking(false);
         setFlippedCards([]);
       } else {
+        // Vira as cartas de volta se não combinarem
         timeoutRef.current = setTimeout(() => {
           setCards((prev) =>
             prev.map((card) => (card.flipped && !card.matched ? { ...card, flipped: false } : card))
@@ -220,6 +242,7 @@ export default function Game() {
     }
   };
 
+  // Renderização do componente
   return (
     <div className="flex min-h-svh flex-col items-center justify-center gap-4 bg-background p-2 md:p-10">
       {isLoading && <LoadingScreen />}
@@ -227,6 +250,7 @@ export default function Game() {
       <p className={`text-base md:text-lg mb-2 md:mb-6 ${timeLeft <= 10 ? 'text-red-600 font-bold animate-pulse' : ''}`}>
         Tempo restante: {timeLeft}s
       </p>
+      {/* Grid de cartas */}
       <div className="grid grid-cols-4 gap-1 md:gap-6 mt-2 md:mt-4 w-[98%] md:w-full md:max-w-4xl mx-auto">
         {cards.map((card) => (
           <Card
@@ -237,10 +261,12 @@ export default function Game() {
             onClick={() => handleCardClick(card.id)}
           >
             {card.flipped || card.matched ? (
+              // Conteúdo da carta virada
               <div className="w-full h-full flex items-center justify-center p-4">
                 <span className="text-2xl md:text-5xl font-bold text-white transition-all duration-300">{card.value}</span>
               </div>
             ) : (
+              // Verso da carta
               <div className="w-full h-full flex items-center justify-center p-4 transition-all duration-300">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 46 28" fill="none" className="w-full h-full">
                   <g clipPath="url(#clip0_914_710)">
@@ -259,6 +285,7 @@ export default function Game() {
         ))}
       </div>
 
+      {/* Estilos CSS globais */}
       <style jsx global>{`
         .perspective-1000 {
           perspective: 1000px;
@@ -278,6 +305,7 @@ export default function Game() {
   );
 }
 
+// Função para gerar as cartas do jogo
 function generateCards(): CardType[] {
   const values = ["A", "B", "C", "D", "E", "F", "G", "H"];
   const doubled = [...values, ...values].sort(() => Math.random() - 0.5);
@@ -287,4 +315,4 @@ function generateCards(): CardType[] {
     flipped: false,
     matched: false,
   }));
-}
+} 
