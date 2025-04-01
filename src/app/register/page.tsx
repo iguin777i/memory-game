@@ -32,46 +32,14 @@ export default function Register({
 }: React.ComponentProps<"div">) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
+  const [role, setRole] = useState("");
+  const [company, setCompany] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showLoginDialog, setShowLoginDialog] = useState(false);
   const [loginPassword, setLoginPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-
-  const formatPhone = (value: string) => {
-    // Remove tudo que não for número
-    const numbers = value.replace(/\D/g, '')
-    
-    // Aplica a máscara
-    let formatted = numbers
-    if (numbers.length <= 11) {
-      // Formata para (DD) 99999-9999
-      formatted = numbers.replace(/^(\d{2})(\d{5})(\d{4}).*/, '($1) $2-$3')
-      
-      // Se ainda não tiver todos os números, ajusta a formatação parcial
-      if (numbers.length < 11) {
-        if (numbers.length > 7) {
-          // (DD) 99999-9
-          formatted = numbers.replace(/^(\d{2})(\d{5})(\d{0,4}).*/, '($1) $2-$3')
-        } else if (numbers.length > 2) {
-          // (DD) 99999
-          formatted = numbers.replace(/^(\d{2})(\d{0,5}).*/, '($1) $2')
-        } else if (numbers.length > 0) {
-          // (DD
-          formatted = numbers.replace(/^(\d{0,2}).*/, '($1')
-        }
-      }
-    }
-    
-    return formatted
-  }
-
-  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatPhone(e.target.value)
-    setPhone(formatted)
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -83,7 +51,7 @@ export default function Register({
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ name, email, phone }),
+        body: JSON.stringify({ name, email, role, company }),
       });
 
       const data = await response.json();
@@ -152,7 +120,8 @@ export default function Register({
         body: JSON.stringify({ 
           email, 
           name, 
-          phone,
+          role,
+          company,
           generateNewPassword: true 
         }),
       });
@@ -302,7 +271,7 @@ export default function Register({
                 <h1 className="text-xl font-bold text-center">
                   Olá, Seja bem vindo ao nosso jogo da memória👋
                 </h1>
-                <p className="text-sm text-center">
+                <p className="text-center text-sm text-muted-foreground">
                   Coloque seus dados para continuar
                 </p>
               </div>
@@ -330,15 +299,25 @@ export default function Register({
                   />
                 </div>
                 <div className="grid gap-3">
-                  <Label htmlFor="phone">Telefone</Label>
+                  <Label htmlFor="role">Cargo</Label>
                   <Input
-                    id="phone"
-                    type="tel"
-                    placeholder="(DD) 99999-9999"
+                    id="role"
+                    type="text"
+                    placeholder="ex: Analista de Sistemas"
                     required
-                    value={phone}
-                    onChange={handlePhoneChange}
-                    maxLength={15}
+                    value={role}
+                    onChange={(e) => setRole(e.target.value)}
+                  />
+                </div>
+                <div className="grid gap-3">
+                  <Label htmlFor="company">Empresa</Label>
+                  <Input
+                    id="company"
+                    type="text"
+                    placeholder="ex: Empresa XYZ"
+                    required
+                    value={company}
+                    onChange={(e) => setCompany(e.target.value)}
                   />
                 </div>
                 <Button type="submit" className="w-full" disabled={loading}>

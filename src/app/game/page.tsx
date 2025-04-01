@@ -6,6 +6,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Card } from "@/components/ui/card";
 import { useRouter } from "next/navigation";
 import { LoadingScreen } from "@/components/ui/loading-screen";
+import Image from "next/image";
 
 // Define o tipo de uma carta do jogo
 type CardType = { id: number; value: string; flipped: boolean; matched: boolean };
@@ -21,6 +22,14 @@ const cardImages: { [key: string]: string } = {
   'G': '/peças - jogo interativo/peças_Interoperabilidade .png',
   'H': '/peças - jogo interativo/peças_Saúde digital.png'
 };
+
+// Função para pré-carregar as imagens
+function preloadImages() {
+  Object.values(cardImages).forEach((src) => {
+    const img = new window.Image();
+    img.src = src;
+  });
+}
 
 // Função para gerar as cartas do jogo em ordem fixa
 function generateCards(): CardType[] {
@@ -57,7 +66,12 @@ export default function Game() {
   useEffect(() => {
     const shuffledCards = [...cards].sort(() => Math.random() - 0.5);
     setCards(shuffledCards);
-  }, []); // Empty dependency array means this runs once on mount
+  }, [cards]); // Adicionado cards como dependência
+
+  // Pré-carrega as imagens ao montar o componente
+  useEffect(() => {
+    preloadImages();
+  }, []);
 
   // Função para salvar a pontuação do jogador
   const saveScore = useCallback(async (time: number, completed: boolean) => {
@@ -309,11 +323,18 @@ export default function Game() {
               </div>
               {/* Verso da carta (imagem) */}
               <div className="absolute inset-0 w-full h-full backface-hidden rotate-y-180">
-                <img 
-                  src={cardImages[card.value]} 
-                  alt={`Carta ${card.value}`}
-                  className="w-full h-full object-cover rounded-lg"
-                />
+                <div className="w-full h-full">
+                  <Image
+                    src={cardImages[card.value]}
+                    alt={`Card ${card.value}`}
+                    fill
+                    className="object-contain rounded-lg"
+                    onError={(e) => {
+                      console.error(`Erro ao carregar imagem: ${cardImages[card.value]}`);
+                      e.currentTarget.src = '/placeholder.png';
+                    }}
+                  />
+                </div>
               </div>
             </div>
           </Card>

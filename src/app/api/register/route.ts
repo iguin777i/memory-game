@@ -3,7 +3,7 @@ import { prisma } from '@/lib/server/prisma'
 
 export async function POST(request: Request) {
   try {
-    const { name, email, phone, generateNewPassword } = await request.json()
+    const { name, email, role, company, generateNewPassword } = await request.json()
     
     // Verifica se o usuário já existe
     const existingUser = await prisma.user.findUnique({
@@ -56,7 +56,7 @@ export async function POST(request: Request) {
     const generatedPassword = `${randomLetter}-${randomNumbers}`
 
     const user = await prisma.user.create({
-      data: { name, email, phone, password: generatedPassword },
+      data: { name, email, role, company, password: generatedPassword },
     })
 
     return NextResponse.json({ 

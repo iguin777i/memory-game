@@ -116,7 +116,12 @@ export default function Ranking() {
 
   // Encontra a pontuação do usuário atual
   const currentUserScore = scores.find(score => {
-    console.log('Comparando:', score.userId, currentUserId); // Debug log
+    console.log('Comparando:', {
+      scoreUserId: score.userId,
+      currentUserId: currentUserId,
+      isMatch: score.userId === currentUserId,
+      score: score
+    });
     return score.userId === currentUserId;
   });
   console.log('Current User Score:', currentUserScore); // Debug log
