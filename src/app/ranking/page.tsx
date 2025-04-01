@@ -39,6 +39,7 @@ export default function Ranking() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -51,6 +52,7 @@ export default function Ranking() {
           throw new Error('Erro ao buscar pontuações');
         }
         const data = await response.json();
+        console.log('Scores recebidos:', data); // Debug log
         setScores(Array.isArray(data) ? data : []);
       } catch (error) {
         console.error('Erro ao buscar pontuações:', error);
@@ -63,6 +65,13 @@ export default function Ranking() {
     fetchScores();
     const interval = setInterval(fetchScores, 300000); // 5 minutos
     return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    // Obtém o ID do usuário atual do localStorage
+    const userId = localStorage.getItem('userId');
+    console.log('Current User ID:', userId); // Debug log
+    setCurrentUserId(userId);
   }, []);
 
   // Ordena os scores
@@ -104,6 +113,13 @@ export default function Ranking() {
       userId: score.userId
     };
   });
+
+  // Encontra a pontuação do usuário atual
+  const currentUserScore = scores.find(score => {
+    console.log('Comparando:', score.userId, currentUserId); // Debug log
+    return score.userId === currentUserId;
+  });
+  console.log('Current User Score:', currentUserScore); // Debug log
 
   if (loading) {
     return (
@@ -194,6 +210,26 @@ export default function Ranking() {
           </Button>
         </div>
       </div>
+
+      {/* Mostra o tempo do jogador atual */}
+      {currentUserId && (
+        <Card className="mb-6 bg-white">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Clock className="h-5 w-5 text-[#008C77]" />
+                <span className="font-medium">Seu tempo:</span>
+                <span className={`font-bold ${currentUserScore?.completed ? 'text-[#008C77]' : 'text-red-500'}`}>
+                  {currentUserScore?.completed ? `${currentUserScore.time}s` : 'Não completou'}
+                </span>
+              </div>
+              <div className="text-sm text-gray-500">
+                {currentUserScore?.completed ? 'Parabéns! Você completou o jogo!' : 'Continue tentando!'}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-2">

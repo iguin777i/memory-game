@@ -10,6 +10,30 @@ import { LoadingScreen } from "@/components/ui/loading-screen";
 // Define o tipo de uma carta do jogo
 type CardType = { id: number; value: string; flipped: boolean; matched: boolean };
 
+// Mapeamento de valores para imagens PNG
+const cardImages: { [key: string]: string } = {
+  'A': '/peças - jogo interativo/peças_Gestão estratégica.png',
+  'B': '/peças - jogo interativo/peças_Cloud .png',
+  'C': '/peças - jogo interativo/peças_Paperless1.png',
+  'D': '/peças - jogo interativo/peças_Transformação digital .png',
+  'E': '/peças - jogo interativo/peças_Faturamento.png',
+  'F': '/peças - jogo interativo/peças_Conexão.png',
+  'G': '/peças - jogo interativo/peças_Interoperabilidade .png',
+  'H': '/peças - jogo interativo/peças_Saúde digital.png'
+};
+
+// Função para gerar as cartas do jogo em ordem fixa
+function generateCards(): CardType[] {
+  const values = ["A", "B", "C", "D", "E", "F", "G", "H"];
+  const doubled = [...values, ...values];
+  return doubled.map((value, index) => ({
+    id: index,
+    value,
+    flipped: false,
+    matched: false,
+  }));
+}
+
 // Componente principal do jogo
 export default function Game() {
   // Estados do jogo
@@ -28,6 +52,12 @@ export default function Game() {
   const tickRef = useRef<HTMLAudioElement | null>(null); // Som do relógio
   const alarmRef = useRef<HTMLAudioElement | null>(null); // Som do alarme
   const router = useRouter();
+
+  // Shuffle cards on client-side only
+  useEffect(() => {
+    const shuffledCards = [...cards].sort(() => Math.random() - 0.5);
+    setCards(shuffledCards);
+  }, []); // Empty dependency array means this runs once on mount
 
   // Função para salvar a pontuação do jogador
   const saveScore = useCallback(async (time: number, completed: boolean) => {
@@ -255,19 +285,16 @@ export default function Game() {
         {cards.map((card) => (
           <Card
             key={card.id}
-            className={`aspect-square w-full md:max-w-[160px] flex items-center justify-center cursor-pointer transition-all duration-300 transform hover:scale-105 ${
-              card.flipped || card.matched ? "bg-[#003087]" : "bg-white"
-            } ${isChecking ? "pointer-events-none" : ""}`}
+            className={`aspect-square w-full md:max-w-[160px] cursor-pointer transition-all duration-300 transform hover:scale-105 perspective-1000 p-0 ${
+              isChecking ? "pointer-events-none" : ""
+            }`}
             onClick={() => handleCardClick(card.id)}
           >
-            {card.flipped || card.matched ? (
-              // Conteúdo da carta virada
-              <div className="w-full h-full flex items-center justify-center p-4">
-                <span className="text-2xl md:text-5xl font-bold text-white transition-all duration-300">{card.value}</span>
-              </div>
-            ) : (
-              // Verso da carta
-              <div className="w-full h-full flex items-center justify-center p-4 transition-all duration-300">
+            <div className={`relative w-full h-full transition-transform duration-500 transform-style-3d ${
+              card.flipped || card.matched ? 'rotate-y-180' : ''
+            }`}>
+              {/* Frente da carta (logo) */}
+              <div className="absolute inset-0 w-full h-full backface-hidden rounded-lg flex items-center justify-center p-4">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 46 28" fill="none" className="w-full h-full">
                   <g clipPath="url(#clip0_914_710)">
                     <path d="M21.0159 27.9815V21.9229H9.98461L16.1403 15.8198C16.6787 15.4043 17.025 14.7624 17.025 14.0353C17.025 13.3081 16.69 12.6848 16.1629 12.2692L9.90932 6.0326H21.0121V0.0111335H3.53151C3.50139 0.0111335 3.47504 0.0074234 3.44868 0.0074234C1.54362 0.0074234 0 1.53598 0 3.41699C0 4.40016 0.421673 5.27945 1.09183 5.90275L1.0843 5.9213L9.10738 14.0167L1.0843 22.1752C0.459322 22.7948 0.0715338 23.6481 0.0715338 24.5904C0.0715338 26.4752 1.61516 28 3.51645 28C3.63316 28 3.74611 27.9926 3.85906 27.9815H21.0159Z" fill="#008C77" />
@@ -280,7 +307,15 @@ export default function Game() {
                   </defs>
                 </svg>
               </div>
-            )}
+              {/* Verso da carta (imagem) */}
+              <div className="absolute inset-0 w-full h-full backface-hidden rotate-y-180">
+                <img 
+                  src={cardImages[card.value]} 
+                  alt={`Carta ${card.value}`}
+                  className="w-full h-full object-cover rounded-lg"
+                />
+              </div>
+            </div>
           </Card>
         ))}
       </div>
@@ -290,6 +325,9 @@ export default function Game() {
         .perspective-1000 {
           perspective: 1000px;
         }
+        .transform-style-3d {
+          transform-style: preserve-3d;
+        }
         .backface-hidden {
           backface-visibility: hidden;
           -webkit-backface-visibility: hidden;
@@ -297,22 +335,7 @@ export default function Game() {
         .rotate-y-180 {
           transform: rotateY(180deg);
         }
-        .rotate-y-0 {
-          transform: rotateY(0deg);
-        }
       `}</style>
     </div>
   );
-}
-
-// Função para gerar as cartas do jogo
-function generateCards(): CardType[] {
-  const values = ["A", "B", "C", "D", "E", "F", "G", "H"];
-  const doubled = [...values, ...values].sort(() => Math.random() - 0.5);
-  return doubled.map((value, index) => ({
-    id: index,
-    value,
-    flipped: false,
-    matched: false,
-  }));
 } 
