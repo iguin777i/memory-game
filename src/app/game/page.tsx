@@ -62,11 +62,16 @@ export default function Game() {
   const alarmRef = useRef<HTMLAudioElement | null>(null); // Som do alarme
   const router = useRouter();
 
-  // Shuffle cards on client-side only
-  useEffect(() => {
+  // Função para embaralhar cartas
+  const shuffleCards = useCallback(() => {
     const shuffledCards = [...cards].sort(() => Math.random() - 0.5);
     setCards(shuffledCards);
-  }, [cards]); // Adicionado cards como dependência
+  }, [cards]);
+
+  // Shuffle cards on client-side only
+  useEffect(() => {
+    shuffleCards();
+  }, [shuffleCards]);
 
   // Pré-carrega as imagens ao montar o componente
   useEffect(() => {
@@ -145,12 +150,7 @@ export default function Game() {
           setGameOver(true);
           if (!scoreSaved) {
             setScoreSaved(true);
-            saveScore(60, false).then(() => {
-              setIsLoading(true);
-              setTimeout(() => {
-                router.push("/ranking");
-              }, 1500);
-            });
+            saveScore(60, false);
           }
           return 0;
         }
@@ -164,7 +164,7 @@ export default function Game() {
         clearInterval(timerRef.current);
       }
     };
-  }, [gameOver, router, scoreSaved, saveScore]);
+  }, [gameOver, saveScore, scoreSaved]);
 
   // Verifica se todas as cartas foram combinadas
   useEffect(() => {
@@ -176,7 +176,10 @@ export default function Game() {
         clearInterval(timerRef.current);
       }
       saveScore(timeTaken, true).then(() => {
-        router.push("/ranking");
+        setIsLoading(true);
+        setTimeout(() => {
+          router.push("/ranking");
+        }, 1500);
       });
     }
   }, [cards, timeLeft, router, scoreSaved, saveScore]);
@@ -242,19 +245,22 @@ export default function Game() {
       card.id === id && !card.flipped && !card.matched ? { ...card, flipped: true } : card
     );
     setCards(newCards);
-    setFlippedCards([...flippedCards, id]);
+    
+    // Atualiza as cartas viradas
+    const newFlippedCards = [...flippedCards, id];
+    setFlippedCards(newFlippedCards);
 
     // Verifica se há duas cartas viradas
-    if (flippedCards.length === 1) {
+    if (newFlippedCards.length === 2) {
       setIsChecking(true);
-      const [firstCardId] = flippedCards;
+      const [firstCardId, secondCardId] = newFlippedCards;
       const firstCard = cards.find((c) => c.id === firstCardId);
-      const secondCard = cards.find((c) => c.id === id);
+      const secondCard = cards.find((c) => c.id === secondCardId);
 
       // Verifica se as cartas combinam
       if (firstCard?.value === secondCard?.value) {
         setCards((prev) =>
-          prev.map((card) => (card.id === firstCardId || card.id === id ? { ...card, matched: true } : card))
+          prev.map((card) => (card.id === firstCardId || card.id === secondCardId ? { ...card, matched: true } : card))
         );
         // Toca o som de match
         if (matchSoundRef.current) {
