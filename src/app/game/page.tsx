@@ -66,7 +66,7 @@ export default function Game() {
   const shuffleCards = useCallback(() => {
     const shuffledCards = [...cards].sort(() => Math.random() - 0.5);
     setCards(shuffledCards);
-  }, [cards]);
+  }, []);
 
   // Shuffle cards on client-side only
   useEffect(() => {
@@ -164,7 +164,7 @@ export default function Game() {
         clearInterval(timerRef.current);
       }
     };
-  }, [gameOver, saveScore, scoreSaved]);
+  }, [gameOver, saveScore]);
 
   // Verifica se todas as cartas foram combinadas
   useEffect(() => {
@@ -182,7 +182,7 @@ export default function Game() {
         }, 1500);
       });
     }
-  }, [cards, timeLeft, router, scoreSaved, saveScore]);
+  }, [cards, timeLeft, router, saveScore]);
 
   // Inicializa os sons do jogo
   useEffect(() => {
@@ -233,7 +233,7 @@ export default function Game() {
   }, [timeLeft, gameOver]);
 
   // Função para lidar com o clique nas cartas
-  const handleCardClick = (id: number) => {
+  const handleCardClick = useCallback((id: number) => {
     if (flippedCards.length === 2 || gameOver || isChecking) return;
     
     if (timeoutRef.current) {
@@ -290,7 +290,7 @@ export default function Game() {
         }, 1000);
       }
     }
-  };
+  }, [cards, flippedCards, gameOver, isChecking]);
 
   // Renderização do componente
   return (
