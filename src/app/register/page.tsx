@@ -1,43 +1,17 @@
 // src/app/register/page.tsx
 "use client";
-import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Drawer,
-  DrawerClose,
-  DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-} from "@/components/ui/drawer";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { toast } from "react-hot-toast";
-
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-export default function Register({
-  className,
-  ...props
-}: React.ComponentProps<"div">) {
+export default function Register() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("");
   const [company, setCompany] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [showLoginDialog, setShowLoginDialog] = useState(false);
-  const [loginPassword, setLoginPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
@@ -56,92 +30,16 @@ export default function Register({
 
       const data = await response.json();
 
-      if (response.status === 409) {
-        // Usuário já existe
-        setShowLoginDialog(true);
-        return;
-      }
-
       if (!response.ok) {
-        throw new Error(data.error || "Algo deu errado");
+        throw new Error(data.error || "Erro ao processar o registro");
       }
 
       // Registro bem sucedido
-      setPassword(data.password);
       localStorage.setItem('userId', data.userId.toString());
-      setShowPassword(true);
-    } catch (error) {
-      console.error("Erro ao registrar:", error);
-      toast.error("Erro ao registrar usuário");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-
-    try {
-      const response = await fetch("/api/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password: loginPassword }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Credenciais inválidas");
-      }
-
-      // Login bem sucedido
-      localStorage.setItem('userId', data.userId.toString());
-      setShowLoginDialog(false);
       router.push("/game");
     } catch (error) {
-      console.error("Erro ao fazer login:", error);
-      toast.error(error instanceof Error ? error.message : "Senha incorreta");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleGenerateNewPassword = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch("/api/register", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ 
-          email, 
-          name, 
-          role,
-          company,
-          generateNewPassword: true 
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Erro ao gerar nova senha");
-      }
-
-      // Atualiza a senha e mostra no modal
-      setPassword(data.password);
-      setShowLoginDialog(false);
-      setShowPassword(true);
-      localStorage.setItem('userId', data.userId.toString());
-      
-      toast.success("Nova senha gerada com sucesso!");
-    } catch (error) {
-      console.error("Erro ao gerar nova senha:", error);
-      toast.error("Erro ao gerar nova senha");
+      console.error("Erro ao registrar:", error);
+      toast.error(error instanceof Error ? error.message : "Erro ao registrar usuário");
     } finally {
       setLoading(false);
     }
@@ -149,106 +47,8 @@ export default function Register({
 
   return (
     <div className="flex min-h-svh flex-col items-center justify-center gap-6 bg-background p-6 md:p-10">
-      <Dialog open={showLoginDialog} onOpenChange={setShowLoginDialog}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Bem-vindo de volta! 👋</DialogTitle>
-            <DialogDescription>
-              Este email já está registrado. Por favor, insira sua senha para continuar.
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleLogin}>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="login-password">Senha</Label>
-                <Input
-                  id="login-password"
-                  type="text"
-                  placeholder="Digite sua senha (ex: A-12)"
-                  required
-                  value={loginPassword}
-                  onChange={(e) => {
-                    const value = e.target.value.toUpperCase();
-                    
-                    // Se estiver apagando, permite
-                    if (value.length < loginPassword.length) {
-                      setLoginPassword(value);
-                      return;
-                    }
-
-                    // Validação para digitação
-                    if (value.length === 1) {
-                      // Primeira posição só aceita letra
-                      if (/^[A-Z]$/.test(value)) {
-                        setLoginPassword(value + '-');
-                      }
-                    } else if (value.length > 1) {
-                      // Após o hífen, só aceita números
-                      if (/^[A-Z]-\d{0,2}$/.test(value)) {
-                        setLoginPassword(value);
-                      }
-                    }
-                  }}
-                  maxLength={4}
-                  disabled={loading}
-                />
-                <p className="text-sm text-muted-foreground mt-2">
-                  Esqueceu sua senha? <Button type="button" variant="link" className="p-0 h-auto font-normal" onClick={handleGenerateNewPassword} disabled={loading}>
-                    Gerar nova senha
-                  </Button>
-                </p>
-              </div>
-            </div>
-            <DialogFooter className="gap-2">
-              <Button type="submit" disabled={loading}>
-                {loading ? "Entrando..." : "Entrar"}
-              </Button>
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={() => setShowLoginDialog(false)}
-                disabled={loading}
-              >
-                Cancelar
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      <Drawer open={showPassword} onOpenChange={setShowPassword}>
-        <DrawerContent>
-          <div className="mx-auto w-full max-w-sm">
-            <DrawerHeader>
-              <DrawerTitle>Sua senha foi gerada!</DrawerTitle>
-              <DrawerDescription>
-                Memorize esta senha! Você precisará dela para jogar.
-              </DrawerDescription>
-            </DrawerHeader>
-            <div className="p-4">
-              <div className="bg-[#003087] text-white p-8 rounded-lg text-4xl font-bold flex items-center justify-center">
-                {password}
-              </div>
-            </div>
-            <DrawerFooter>
-              <Button onClick={() => {
-                setShowPassword(false);
-                router.push("/game");
-              }}>
-                Começar o Jogo!
-              </Button>
-              <DrawerClose asChild>
-                <Button variant="outline">
-                  Fechar
-                </Button>
-              </DrawerClose>
-            </DrawerFooter>
-          </div>
-        </DrawerContent>
-      </Drawer>
-
       <div className="w-full max-w-sm">
-        <div className={cn("flex flex-col gap-6", className)} {...props}>
+        <div className="flex flex-col gap-6">
           <form onSubmit={handleSubmit}>
             <div className="flex flex-col gap-6">
               <div className="flex flex-col items-center gap-2">
@@ -321,7 +121,7 @@ export default function Register({
                   />
                 </div>
                 <Button type="submit" className="w-full" disabled={loading}>
-                  Continuar
+                  {loading ? "Registrando..." : "Continuar"}
                 </Button>
               </div>
             </div>

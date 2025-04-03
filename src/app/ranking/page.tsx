@@ -206,14 +206,9 @@ export default function Ranking() {
           </div>
           <h1 className="hidden md:block text-3xl font-bold text-[#008C77]">Ranking</h1>
         </div>
-        <div className="flex gap-4">
-          <Button className="bg-[#008C77]" onClick={() => router.push("/game")}>
-            Jogar Novamente
-          </Button>
-          <Button className="bg-[#008C77]" onClick={() => router.push("/")}>
-            Voltar
-          </Button>
-        </div>
+        <Button className="bg-[#008C77]" onClick={() => router.push("/")}>
+          Voltar
+        </Button>
       </div>
 
       {/* Mostra o tempo do jogador atual */}
