@@ -23,7 +23,7 @@ interface Score {
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    console.log('Dados recebidos:', body) // Log dos dados recebidos
+    console.log('Dados recebidos:', body)
 
     const { userId, time, completed, mistakes = 0 } = body
 
@@ -38,95 +38,101 @@ export async function POST(request: Request) {
     // Converte o userId para string
     const userIdString = String(userId)
 
-    // Verifica se o usuário existe
-    const userExists = await prisma.user.findUnique({
-      where: { id: userIdString }
-    })
+    try {
+      // Verifica se o usuário existe
+      const userExists = await prisma.user.findUnique({
+        where: { id: userIdString }
+      })
 
-    if (!userExists) {
-      console.error('Usuário não encontrado:', userIdString)
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Usuário não encontrado' 
-      }, { status: 404 })
-    }
+      if (!userExists) {
+        console.error('Usuário não encontrado:', userIdString)
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Usuário não encontrado' 
+        }, { status: 404 })
+      }
 
-    // Busca a pontuação existente do usuário
-    const existingScore = await prisma.score.findFirst({
-      where: { userId: userIdString }
-    })
+      // Busca a pontuação existente do usuário
+      const existingScore = await prisma.score.findFirst({
+        where: { userId: userIdString }
+      })
 
-    console.log('Pontuação existente:', existingScore) // Log da pontuação existente
+      console.log('Pontuação existente:', existingScore)
 
-    // Verifica conquistas se o jogo foi completado
-    const unlockedAchievements = completed ? 
-      await checkAchievements(userIdString, { time, completed, mistakes }) : 
-      []
+      // Verifica conquistas se o jogo foi completado
+      const unlockedAchievements = completed ? 
+        await checkAchievements(userIdString, { time, completed, mistakes }) : 
+        []
 
-    // Calcula pontos baseado no tempo e conquistas
-    const points = completed ? calculatePoints(time, unlockedAchievements) : 0
+      // Calcula pontos baseado no tempo e conquistas
+      const points = completed ? calculatePoints(time, unlockedAchievements) : 0
 
-    let score
+      let score
 
-    // Se o jogo não foi completado
-    if (!completed) {
-      if (existingScore) {
-        score = existingScore
+      // Se o jogo não foi completado
+      if (!completed) {
+        if (existingScore) {
+          score = existingScore
+        } else {
+          score = await prisma.score.create({
+            data: { 
+              userId: userIdString, 
+              time: null,
+              points,
+              completed: false
+            }
+          })
+        }
+      } else if (existingScore) {
+        // Se já existe uma pontuação e o jogo foi completado
+        if (!existingScore.completed || (time < existingScore.time!)) {
+          score = await prisma.score.update({
+            where: { id: existingScore.id },
+            data: { 
+              time,
+              points,
+              completed: true
+            }
+          })
+        } else {
+          score = existingScore
+        }
       } else {
+        // Se não existe pontuação e o jogo foi completado
         score = await prisma.score.create({
           data: { 
             userId: userIdString, 
-            time: null,
-            points,
-            completed: false
-          }
-        })
-      }
-    } else if (existingScore) {
-      // Se já existe uma pontuação e o jogo foi completado
-      if (!existingScore.completed || (time < existingScore.time!)) {
-        score = await prisma.score.update({
-          where: { id: existingScore.id },
-          data: { 
             time,
             points,
             completed: true
           }
         })
-      } else {
-        score = existingScore
       }
-    } else {
-      // Se não existe pontuação e o jogo foi completado
-      score = await prisma.score.create({
-        data: { 
-          userId: userIdString, 
-          time,
-          points,
-          completed: true
-        }
+
+      console.log('Pontuação salva:', score)
+
+      return NextResponse.json({ 
+        success: true, 
+        score,
+        unlockedAchievements,
+        message: !completed ? 'Jogo não completado' :
+          (existingScore && existingScore.completed && time >= existingScore.time!)
+            ? 'Tempo anterior era melhor' 
+            : 'Pontuação registrada com sucesso'
       })
+    } catch (dbError) {
+      console.error('Erro de banco de dados:', dbError)
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Erro ao acessar o banco de dados',
+        details: dbError instanceof Error ? dbError.message : String(dbError)
+      }, { status: 500 })
     }
-
-    console.log('Pontuação salva:', score) // Log da pontuação salva
-
-    await prisma.$disconnect()
-
-    return NextResponse.json({ 
-      success: true, 
-      score,
-      unlockedAchievements,
-      message: !completed ? 'Jogo não completado' :
-        (existingScore && existingScore.completed && time >= existingScore.time!)
-          ? 'Tempo anterior era melhor' 
-          : 'Pontuação registrada com sucesso'
-    })
   } catch (error) {
-    console.error('Erro detalhado:', error)
-    await prisma.$disconnect()
+    console.error('Erro geral:', error)
     return NextResponse.json({ 
       success: false, 
-      error: 'Erro ao salvar pontuação',
+      error: 'Erro ao processar a requisição',
       details: error instanceof Error ? error.message : String(error)
     }, { status: 500 })
   }
@@ -135,12 +141,10 @@ export async function POST(request: Request) {
 export async function GET() {
   try {
     const scores = await getFormattedScores()
-    await prisma.$disconnect()
-    return NextResponse.json(scores || []) // Garante que retorna array vazio se não houver scores
+    return NextResponse.json(scores || [])
   } catch (error) {
     console.error('Erro ao buscar pontuações:', error)
-    await prisma.$disconnect()
-    return NextResponse.json([]) // Retorna array vazio em caso de erro
+    return NextResponse.json([])
   }
 }
 
@@ -154,9 +158,9 @@ async function getFormattedScores() {
         ]
       },
       orderBy: [
-        { points: 'desc' }, // Primeiro ordena por pontos
-        { completed: 'desc' }, // Depois por completados
-        { time: 'asc' } // Por fim por tempo
+        { points: 'desc' },
+        { completed: 'desc' },
+        { time: 'asc' }
       ],
       take: 10,
       include: {
