@@ -1,19 +1,21 @@
 generator client {
   provider = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
   id           String            @id @default(uuid())
   name         String
   email        String            @unique
-  role         String
-  company      String
   createdAt    DateTime          @default(now())
+  company      String
+  role         String
   scores       Score[]
   achievements UserAchievement[]
 }
@@ -22,9 +24,9 @@ model Score {
   id        String   @id @default(uuid())
   userId    String
   time      Float?
-  points    Int      @default(0)
   completed Boolean  @default(false)
   createdAt DateTime @default(now())
+  points    Int      @default(0)
   user      User     @relation(fields: [userId], references: [id])
 }
 
