@@ -18,12 +18,6 @@ const prismaClientSingleton = () => {
     log: ['error', 'warn'],
   })
 
-  // Add error handling for connection issues
-  prisma.$connect().catch((err) => {
-    console.error('Failed to connect to database:', err)
-    throw err
-  })
-
   return prisma
 }
 
