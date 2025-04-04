@@ -3,9 +3,13 @@ import { prisma } from '@/lib/server/prisma'
 import { Prisma } from '@prisma/client'
 
 export async function POST(request: Request) {
-  console.log('Iniciando processo de registro...')
-  
+  console.log('Tentando conectar ao banco...');
   try {
+    await prisma.$connect();
+    console.log('Conexão bem sucedida!');
+    
+    console.log('Iniciando processo de registro...')
+  
     const body = await request.json()
     const { name, email, role, company } = body
     
@@ -102,16 +106,15 @@ export async function POST(request: Request) {
     }
 
   } catch (error) {
-    console.error('Erro geral no registro:', {
-      error,
-      message: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined
-    })
-    
+    console.error('Erro de conexão:', {
+      message: error.message,
+      code: error.code,
+      meta: error.meta
+    });
     return NextResponse.json({ 
       success: false, 
-      error: 'Erro ao processar a requisição',
-      details: error instanceof Error ? error.message : String(error)
-    }, { status: 500 })
+      error: 'Erro de conexão com o banco de dados',
+      details: error.message
+    }, { status: 503 });
   }
 }
