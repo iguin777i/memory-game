@@ -38,93 +38,61 @@ export async function POST(request: Request) {
     // Converte o userId para string
     const userIdString = String(userId)
 
+    // Verifica se o usuário existe
+    const userExists = await prisma.user.findUnique({
+      where: { id: userIdString }
+    })
+
+    if (!userExists) {
+      console.error('Usuário não encontrado:', userIdString)
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Usuário não encontrado' 
+      }, { status: 404 })
+    }
+
     try {
-      // Verifica se o usuário existe
-      const userExists = await prisma.user.findUnique({
-        where: { id: userIdString }
+      // Primeiro tenta salvar o score básico
+      let score = await prisma.score.create({
+        data: { 
+          userId: userIdString, 
+          time: completed ? time : null,
+          points: 0,
+          completed
+        }
       })
 
-      if (!userExists) {
-        console.error('Usuário não encontrado:', userIdString)
+      if (completed) {
+        // Se completou, então processa conquistas e pontos
+        const unlockedAchievements = await checkAchievements(userIdString, { time, completed, mistakes })
+        const points = calculatePoints(time, unlockedAchievements)
+
+        // Atualiza o score com os pontos
+        score = await prisma.score.update({
+          where: { id: score.id },
+          data: { points }
+        })
+
         return NextResponse.json({ 
-          success: false, 
-          error: 'Usuário não encontrado' 
-        }, { status: 404 })
-      }
-
-      // Busca a pontuação existente do usuário
-      const existingScore = await prisma.score.findFirst({
-        where: { userId: userIdString }
-      })
-
-      console.log('Pontuação existente:', existingScore)
-
-      // Verifica conquistas se o jogo foi completado
-      const unlockedAchievements = completed ? 
-        await checkAchievements(userIdString, { time, completed, mistakes }) : 
-        []
-
-      // Calcula pontos baseado no tempo e conquistas
-      const points = completed ? calculatePoints(time, unlockedAchievements) : 0
-
-      let score
-
-      // Se o jogo não foi completado
-      if (!completed) {
-        if (existingScore) {
-          score = existingScore
-        } else {
-          score = await prisma.score.create({
-            data: { 
-              userId: userIdString, 
-              time: null,
-              points,
-              completed: false
-            }
-          })
-        }
-      } else if (existingScore) {
-        // Se já existe uma pontuação e o jogo foi completado
-        if (!existingScore.completed || (time < existingScore.time!)) {
-          score = await prisma.score.update({
-            where: { id: existingScore.id },
-            data: { 
-              time,
-              points,
-              completed: true
-            }
-          })
-        } else {
-          score = existingScore
-        }
-      } else {
-        // Se não existe pontuação e o jogo foi completado
-        score = await prisma.score.create({
-          data: { 
-            userId: userIdString, 
-            time,
-            points,
-            completed: true
-          }
+          success: true, 
+          score,
+          unlockedAchievements,
+          message: 'Pontuação registrada com sucesso'
         })
       }
-
-      console.log('Pontuação salva:', score)
 
       return NextResponse.json({ 
         success: true, 
         score,
-        unlockedAchievements,
-        message: !completed ? 'Jogo não completado' :
-          (existingScore && existingScore.completed && time >= existingScore.time!)
-            ? 'Tempo anterior era melhor' 
-            : 'Pontuação registrada com sucesso'
+        unlockedAchievements: [],
+        message: 'Jogo não completado'
       })
+
     } catch (dbError) {
-      console.error('Erro de banco de dados:', dbError)
+      console.error('Erro específico do banco:', dbError)
       return NextResponse.json({ 
         success: false, 
-        error: 'Erro ao acessar o banco de dados',
+        error: 'Erro ao salvar no banco de dados',
         details: dbError instanceof Error ? dbError.message : String(dbError)
       }, { status: 500 })
     }
