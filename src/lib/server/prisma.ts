@@ -9,7 +9,7 @@ const prismaClientSingleton = () => {
     throw new Error('DATABASE_URL is not defined')
   }
 
-  return new PrismaClient({
+  const prisma = new PrismaClient({
     datasources: {
       db: {
         url: process.env.DATABASE_URL,
@@ -17,6 +17,14 @@ const prismaClientSingleton = () => {
     },
     log: ['error', 'warn'],
   })
+
+  // Add error handling for connection issues
+  prisma.$connect().catch((err) => {
+    console.error('Failed to connect to database:', err)
+    throw err
+  })
+
+  return prisma
 }
 
 const prisma = globalForPrisma.prisma ?? prismaClientSingleton()

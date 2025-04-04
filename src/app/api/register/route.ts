@@ -13,6 +13,18 @@ export async function POST(request: Request) {
       }, { status: 400 })
     }
 
+    // Test database connection
+    try {
+      await prisma.$queryRaw`SELECT 1`
+    } catch (dbError) {
+      console.error('Database connection error:', dbError)
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Erro de conexão com o banco de dados',
+        details: dbError instanceof Error ? dbError.message : String(dbError)
+      }, { status: 500 })
+    }
+
     // Verifica se o usuário já existe
     const existingUser = await prisma.user.findUnique({
       where: { email },
