@@ -67,7 +67,5 @@ export async function POST(request: Request) {
       error: 'Erro ao processar a requisição',
       details: error instanceof Error ? error.message : String(error)
     }, { status: 500 })
-  } finally {
-    await prisma.$disconnect()
   }
 }
