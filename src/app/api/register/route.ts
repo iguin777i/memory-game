@@ -3,8 +3,16 @@ import { prisma } from '@/lib/server/prisma'
 
 export async function POST(request: Request) {
   try {
-    const { name, email, role, company } = await request.json()
-    
+    const body = await request.json()
+    const { name, email, role, company } = body
+
+    if (!name || !email || !role || !company) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Todos os campos são obrigatórios' 
+      }, { status: 400 })
+    }
+
     // Verifica se o usuário já existe
     const existingUser = await prisma.user.findUnique({
       where: { email },
@@ -53,10 +61,11 @@ export async function POST(request: Request) {
     })
 
   } catch (error) {
-    console.error('Erro:', error)
+    console.error('Erro no registro:', error)
     return NextResponse.json({ 
       success: false, 
-      error: 'Erro ao processar a requisição'
+      error: 'Erro ao processar a requisição',
+      details: error instanceof Error ? error.message : String(error)
     }, { status: 500 })
   } finally {
     await prisma.$disconnect()

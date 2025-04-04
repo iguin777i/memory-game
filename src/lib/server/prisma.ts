@@ -5,6 +5,10 @@ const globalForPrisma = globalThis as unknown as {
 }
 
 const prismaClientSingleton = () => {
+  if (!process.env.DATABASE_URL) {
+    throw new Error('DATABASE_URL is not defined')
+  }
+
   return new PrismaClient({
     datasources: {
       db: {
@@ -17,12 +21,8 @@ const prismaClientSingleton = () => {
 
 const prisma = globalForPrisma.prisma ?? prismaClientSingleton()
 
-export { prisma }
-
 if (process.env.NODE_ENV !== 'production') {
   globalForPrisma.prisma = prisma
-} else {
-  if (!globalForPrisma.prisma) {
-    globalForPrisma.prisma = prisma
-  }
-} 
+}
+
+export { prisma } 
