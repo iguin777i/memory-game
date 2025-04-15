@@ -1,0 +1,19 @@
+{
+  "extends": "next/core-web-vitals",
+  "rules": {
+    "no-var": ["error", {
+      "globals": {
+        "prisma": "writable"
+      }
+    }],
+    "@typescript-eslint/no-explicit-any": "error"
+  },
+  "overrides": [
+    {
+      "files": ["lib/prisma.ts"],
+      "rules": {
+        "no-var": "off"
+      }
+    }
+  ]
+}

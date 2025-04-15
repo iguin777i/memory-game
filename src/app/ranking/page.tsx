@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "../../components/ui/button";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Trophy, Clock, Award } from "lucide-react";
@@ -12,8 +12,8 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Chart } from "@/components/ui/chart";
+} from "../../components/ui/card";
+import { Chart } from "../../components/ui/chart";
 
 interface Achievement {
   name: string;

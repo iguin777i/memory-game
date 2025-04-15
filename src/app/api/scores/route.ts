@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/server/prisma'
+import { prisma } from '@/lib/prisma'  // Fixed import path
 import { checkAchievements, calculatePoints } from '@/lib/achievements'
 
 interface Score {
@@ -167,4 +167,4 @@ async function getFormattedScores() {
     console.error('Erro ao formatar scores:', error)
     return []
   }
-} 
+}

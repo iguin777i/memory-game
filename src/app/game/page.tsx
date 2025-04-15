@@ -3,11 +3,11 @@
 
 // Importações necessárias do React e Next.js
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Card } from "@/components/ui/card";
+import { Card } from "../../components/ui/card";
 import { useRouter } from "next/navigation";
-import { LoadingScreen } from "@/components/ui/loading-screen";
+import { LoadingScreen } from "../../components/ui/loading-screen";
 import Image from "next/image";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "../../components/ui/alert";
 import { AlertCircle } from "lucide-react";
 
 // Define o tipo de uma carta do jogo
@@ -67,8 +67,10 @@ export default function Game() {
 
   // Função para embaralhar cartas
   const shuffleCards = useCallback(() => {
-    const shuffledCards = [...cards].sort(() => Math.random() - 0.5);
-    setCards(shuffledCards);
+    setCards(prevCards => {
+      const shuffledCards = [...prevCards].sort(() => Math.random() - 0.5);
+      return shuffledCards;
+    });
   }, []);
 
   // Shuffle cards on client-side only
@@ -270,30 +272,30 @@ export default function Game() {
   }, [timeLeft, gameOver]);
 
   // Função para lidar com o clique nas cartas
-  const handleCardClick = useCallback((id: number) => {
+  const handleCardClick = useCallback((index: number) => {
     if (flippedCards.length === 2 || gameOver || isChecking) return;
     
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
-
+    
     // Vira a carta clicada
     const newCards = cards.map((card) =>
-      card.id === id && !card.flipped && !card.matched ? { ...card, flipped: true } : card
+      card.id === index && !card.flipped && !card.matched ? { ...card, flipped: true } : card
     );
     setCards(newCards);
     
     // Atualiza as cartas viradas
-    const newFlippedCards = [...flippedCards, id];
+    const newFlippedCards = [...flippedCards, index];
     setFlippedCards(newFlippedCards);
-
+    
     // Verifica se há duas cartas viradas
     if (newFlippedCards.length === 2) {
       setIsChecking(true);
       const [firstCardId, secondCardId] = newFlippedCards;
       const firstCard = cards.find((c) => c.id === firstCardId);
       const secondCard = cards.find((c) => c.id === secondCardId);
-
+    
       // Verifica se as cartas combinam
       if (firstCard?.value === secondCard?.value) {
         setCards((prev) =>
@@ -327,9 +329,8 @@ export default function Game() {
         }, 1000);
       }
     }
-  }, [cards, flippedCards, gameOver, isChecking]);
+  }, [cards, flippedCards, gameOver, isChecking, matchSoundRef]); // Adicione todas as dependências
 
-  // Renderização do componente
   return (
     <div className="flex min-h-svh flex-col items-center justify-center gap-4 bg-background p-2 md:p-10">
       {isLoading && <LoadingScreen />}
@@ -419,4 +420,4 @@ export default function Game() {
       `}</style>
     </div>
   );
-} 
+};
