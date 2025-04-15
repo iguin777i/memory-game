@@ -28,7 +28,6 @@ export async function POST(request: Request) {
     const { userId, time, completed, mistakes = 0 } = body
 
     if (!userId) {
-      console.error('UserId não fornecido')
       return NextResponse.json({ 
         success: false, 
         error: 'UserId não fornecido' 
@@ -44,60 +43,50 @@ export async function POST(request: Request) {
     })
 
     if (!userExists) {
-      console.error('Usuário não encontrado:', userIdString)
       return NextResponse.json({ 
         success: false, 
         error: 'Usuário não encontrado' 
       }, { status: 404 })
     }
 
-    try {
-      // Primeiro tenta salvar o score básico
-      let score = await prisma.score.create({
-        data: { 
-          userId: userIdString, 
-          time: completed ? time : null,
-          points: 0,
-          completed
-        }
-      })
-
-      if (completed) {
-        // Se completou, então processa conquistas e pontos
-        const unlockedAchievements = await checkAchievements(userIdString, { time, completed, mistakes })
-        const points = calculatePoints(time, unlockedAchievements)
-
-        // Atualiza o score com os pontos
-        score = await prisma.score.update({
-          where: { id: score.id },
-          data: { points }
-        })
-
-        return NextResponse.json({ 
-          success: true, 
-          score,
-          unlockedAchievements,
-          message: 'Pontuação registrada com sucesso'
-        })
+    // Tenta salvar o score básico
+    const score = await prisma.score.create({
+      data: { 
+        userId: userIdString, 
+        time: completed ? time : null,
+        points: 0,
+        completed
       }
+    })
+
+    if (completed) {
+      // Se completou, processa conquistas e pontos
+      const unlockedAchievements = await checkAchievements(userIdString, { time, completed, mistakes })
+      const points = calculatePoints(time, unlockedAchievements)
+
+      // Atualiza o score com os pontos
+      await prisma.score.update({
+        where: { id: score.id },
+        data: { points }
+      })
 
       return NextResponse.json({ 
         success: true, 
         score,
-        unlockedAchievements: [],
-        message: 'Jogo não completado'
+        unlockedAchievements,
+        message: 'Pontuação registrada com sucesso'
       })
-
-    } catch (dbError) {
-      console.error('Erro específico do banco:', dbError)
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Erro ao salvar no banco de dados',
-        details: dbError instanceof Error ? dbError.message : String(dbError)
-      }, { status: 500 })
     }
+
+    return NextResponse.json({ 
+      success: true, 
+      score,
+      unlockedAchievements: [],
+      message: 'Jogo não completado'
+    })
+
   } catch (error) {
-    console.error('Erro geral:', error)
+    console.error('Erro ao processar pontuação:', error)
     return NextResponse.json({ 
       success: false, 
       error: 'Erro ao processar a requisição',

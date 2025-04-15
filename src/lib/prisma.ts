@@ -12,6 +12,12 @@ const prismaClientSingleton = () => {
       },
     },
     log: ['error', 'warn'],
+    connectionLimit: 5,
+    pool: {
+      min: 0,
+      max: 5,
+      idleTimeoutMillis: 30000,
+    },
   })
 }
 
