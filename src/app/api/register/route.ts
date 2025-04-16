@@ -1,15 +1,25 @@
 import { NextResponse } from 'next/server'
-import  { prisma }  from '@/lib/prisma'
+import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 
+const REQUEST_TIMEOUT = 10000 // 10 seconds
+
 export async function POST(request: Request) {
+  const timeoutPromise = new Promise((_, reject) => {
+    setTimeout(() => reject(new Error('Request timeout')), REQUEST_TIMEOUT)
+  })
+
   console.log('Iniciando processo de registro...')
   
   try {
-    const body = await request.json()
-    const { name, email, role, company } = body
+    const body = await Promise.race([
+      request.json(),
+      timeoutPromise
+    ]) as { name: string; email: string; role: string; company: string }
     
-    console.log('Dados recebidos:', { name, email, role, company })
+    console.log('Dados recebidos:', body)
+
+    const { name, email, role, company } = body
 
     if (!name || !email || !role || !company) {
       console.log('Dados inválidos:', { name, email, role, company })
@@ -74,11 +84,19 @@ export async function POST(request: Request) {
       throw dbError
     }
 
-  } catch (error: unknown) { // Tipando o error como unknown
+  } catch (error) {
     console.error('Erro geral:', {
       message: error instanceof Error ? error.message : 'Erro desconhecido',
       error
     })
+
+    if (error instanceof Error && error.message === 'Request timeout') {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Tempo limite excedido',
+        details: 'A requisição demorou muito para ser processada'
+      }, { status: 408 })
+    }
     
     return NextResponse.json({ 
       success: false, 

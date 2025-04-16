@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'  // Fixed import path
 import { checkAchievements, calculatePoints } from '@/lib/achievements'
 
+const REQUEST_TIMEOUT = 10000 // 10 seconds
+
 interface Score {
   id: string;
   userId: string;
@@ -21,8 +23,16 @@ interface Score {
 }
 
 export async function POST(request: Request) {
+  const timeoutPromise = new Promise((_, reject) => {
+    setTimeout(() => reject(new Error('Request timeout')), REQUEST_TIMEOUT)
+  })
+
   try {
-    const body = await request.json()
+    const body = await Promise.race([
+      request.json(),
+      timeoutPromise
+    ]) as { userId: string; time: number; completed: boolean; mistakes?: number }
+
     console.log('Dados recebidos:', body)
 
     const { userId, time, completed, mistakes = 0 } = body
@@ -87,6 +97,15 @@ export async function POST(request: Request) {
 
   } catch (error) {
     console.error('Erro ao processar pontuação:', error)
+    
+    if (error instanceof Error && error.message === 'Request timeout') {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Tempo limite excedido',
+        details: 'A requisição demorou muito para ser processada'
+      }, { status: 408 })
+    }
+
     return NextResponse.json({ 
       success: false, 
       error: 'Erro ao processar a requisição',

@@ -5,19 +5,18 @@ const globalForPrisma = globalThis as unknown as {
 }
 
 const prismaClientSingleton = () => {
+  if (!process.env.DATABASE_URL) {
+    throw new Error('DATABASE_URL is not defined in environment variables')
+  }
+  
   return new PrismaClient({
     datasources: {
       db: {
-        url: process.env.DATABASE_URL,
-      },
+        url: process.env.DATABASE_URL
+      }
     },
     log: ['error', 'warn'],
-    connectionLimit: 5,
-    pool: {
-      min: 0,
-      max: 5,
-      idleTimeoutMillis: 30000,
-    },
+    errorFormat: 'pretty'
   })
 }
 
